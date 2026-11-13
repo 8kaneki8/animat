@@ -53,7 +53,7 @@ export default function OrBi2D({ expression, motion, artworkSrc, artworkLabel }:
       <div className="orbi2d-orbit orbit-one" aria-hidden="true" />
       <div className="orbi2d-orbit orbit-two" aria-hidden="true" />
 
-      <div className="orbi-reference-switcher" role="group" aria-label="Choose official OrBi reference">
+      {!artworkSrc && <div className="orbi-reference-switcher" role="group" aria-label="Choose official OrBi reference">
         {ORBI_REFERENCES.map((reference) => (
           <button
             key={reference.id}
@@ -72,21 +72,21 @@ export default function OrBi2D({ expression, motion, artworkSrc, artworkLabel }:
             </span>
           </button>
         ))}
-      </div>
+      </div>}
 
       <div className={`orbi-real-stage mood-${mood}`} key={artwork.src}>
         <img
           className="orbi-real-art"
           src={artwork.src}
-          alt={`OrBi original artwork — ${selected.label}`}
+          alt={`OrBi artwork — ${artwork.label}`}
           draggable={false}
-          onLoad={() => markLoaded(selected.id)}
-          onError={() => markFailed(selected.id)}
+          onLoad={() => { if (!artworkSrc) markLoaded(selected.id); }}
+          onError={() => { if (!artworkSrc) markFailed(selected.id); }}
         />
       </div>
 
       <div className="orbi2d-caption">
-        <span className="orbi2d-live-dot" /> ORBI · ORIGINAL ARTWORK
+        <span className="orbi2d-live-dot" /> ORBI · CHARACTER ARTWORK
       </div>
       <div className="orbi-real-note">
         {artwork.description} · {expression} · {motion}
