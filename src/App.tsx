@@ -10,7 +10,9 @@ type Expression = "Neutral" | "Happy" | "Curious" | "Sleepy" | "Excited" | "Worr
 type Mode = "Universal Studio" | "OrBi Creator" | "OrBi 2D";
 type Part = "head" | "body" | "arms" | "legs" | "antenna";
 type Motion = "Idle" | "Float" | "Pulse" | "Wave" | "Talking" | "Off";
-type SkinAsset = { id:string; name:string; image:string; filename:string };\ntype EmotePreset = { id:string; name:string; expression:Expression; motion:Motion };\ntype Project = { name:string; mode:Mode; body:string; accent:string; eyes:string; expression:Expression; motion:Motion; material:string; parts:Record<Part,boolean>; scale:Record<Part,number>; referenceImage?:string; referenceName?:string; skins:SkinAsset[]; activeSkinId?:string; emotes:EmotePreset[] };
+type SkinAsset = { id:string; name:string; image:string; filename:string };
+type EmotePreset = { id:string; name:string; expression:Expression; motion:Motion };
+type Project = { name:string; mode:Mode; body:string; accent:string; eyes:string; expression:Expression; motion:Motion; material:string; parts:Record<Part,boolean>; scale:Record<Part,number>; referenceImage?:string; referenceName?:string; skins:SkinAsset[]; activeSkinId?:string; emotes:EmotePreset[] };
 const defaults:Project={name:"Untitled character",mode:"OrBi Creator",body:"#8B5CF6",accent:"#E5B8FF",eyes:"#76E8FF",expression:"Neutral",motion:"Idle",material:"Glossy",parts:{head:true,body:true,arms:true,legs:true,antenna:true},scale:{head:1,body:1,arms:1,legs:1,antenna:1},skins:[],emotes:[]};
 const expressions:Expression[]=["Neutral","Happy","Curious","Sleepy","Excited","Worried","Angry","Surprised"];
 const partNames:Part[]=["head","body","arms","legs","antenna"];
@@ -35,7 +37,9 @@ function Range({label,value,min=.5,max=1.7,onChange}:{label:string;value:number;
 
 export default function App(){
  const [project,setProject]=useState<Project>(()=>{try{return {...defaults,...JSON.parse(localStorage.getItem("animat-project-v1")||"{}")};}catch{return defaults;}});
- const [panel,setPanel]=useState("Appearance"),[saved,setSaved]=useState(false),[notice,setNotice]=useState("Ready to create"),[isDragging,setIsDragging]=useState(false),[referenceReport,setReferenceReport]=useState("");\n const skinInput=useRef<HTMLInputElement>(null);\n const activeSkin=project.skins.find(s=>s.id===project.activeSkinId);
+ const [panel,setPanel]=useState("Appearance"),[saved,setSaved]=useState(false),[notice,setNotice]=useState("Ready to create"),[isDragging,setIsDragging]=useState(false),[referenceReport,setReferenceReport]=useState("");
+ const skinInput=useRef<HTMLInputElement>(null);
+ const activeSkin=project.skins.find(s=>s.id===project.activeSkinId);
  const referenceInput=useRef<HTMLInputElement>(null);
  const patch=(values:Partial<Project>)=>setProject(p=>({...p,...values}));
  const addReference=async(file?:File)=>{
