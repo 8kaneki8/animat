@@ -34,7 +34,8 @@ function Range({label,value,min=.5,max=1.7,onChange}:{label:string;value:number;
 
 export default function App(){
  const [project,setProject]=useState<Project>(()=>{try{return {...defaults,...JSON.parse(localStorage.getItem("animat-project-v1")||"{}")};}catch{return defaults;}});
- const [panel,setPanel]=useState("Appearance"),[saved,setSaved]=useState(false),[notice,setNotice]=useState("Ready to create"),[isDragging,setIsDragging]=useState(false);\n const referenceInput=useRef<HTMLInputElement>(null);
+ const [panel,setPanel]=useState("Appearance"),[saved,setSaved]=useState(false),[notice,setNotice]=useState("Ready to create"),[isDragging,setIsDragging]=useState(false);
+ const referenceInput=useRef<HTMLInputElement>(null);
  const patch=(values:Partial<Project>)=>setProject(p=>({...p,...values}));
  const addReference=async(file?:File)=>{
   if(!file)return;
