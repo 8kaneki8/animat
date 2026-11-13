@@ -115,7 +115,7 @@ export default function App(){
    const ctx=canvas.getContext("2d");if(!ctx)throw new Error("Canvas unavailable");ctx.drawImage(img,0,0,canvas.width,canvas.height);
    const image=canvas.toDataURL("image/png");
    if(image.length>2500000){setNotice("Accessory file is too large for browser storage");return;}
-   const item:AccessoryAsset={id:crypto.randomUUID(),name:file.name.replace(/\\.[^.]+$/,""),image,x:50,y:45,scale:1,rotation:0};
+   const item:AccessoryAsset={id:crypto.randomUUID(),name:file.name.replace(/\.[^.]+$/,""),image,x:50,y:45,scale:1,rotation:0};
    setProject(p=>({...p,accessories:[...p.accessories,item],mode:"OrBi 2D"}));setPanel("Accessories");setNotice("Accessory added — adjust its position in the preview");
   }catch{setNotice("Could not import this accessory");}
  };
