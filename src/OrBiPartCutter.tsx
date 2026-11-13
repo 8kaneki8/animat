@@ -3,14 +3,14 @@ import type { MouseEvent } from "react";
 import type { RigPartAsset, RigPartName } from "./OrBiRig2D";
 
 const SOURCE = "https://raw.githubusercontent.com/8kaneki8/animat/a25a6f34942e62fd5e01bd33b2efcb7c2dfd86b9/image.png";
-const OPTIONS: {id:RigPartName;label:string}[] = [
- {id:"cape",label:"Cape"},{id:"leftLeg",label:"Left leg"},{id:"rightLeg",label:"Right leg"},
+const OPTIONS: {id:RigPartName | "crown";label:string}[] = [
+ {id:"crown",label:"Crown accessory"},{id:"cape",label:"Cape"},{id:"leftLeg",label:"Left leg"},{id:"rightLeg",label:"Right leg"},
  {id:"torso",label:"Torso"},{id:"leftArm",label:"Left arm"},{id:"rightArm",label:"Right arm"},{id:"head",label:"Head"}
 ];
 
-export default function OrBiPartCutter({onCreate}:{onCreate:(part:RigPartName,asset:RigPartAsset)=>void}) {
+export default function OrBiPartCutter({onCreate}:{onCreate:(part:RigPartName | "crown",asset:RigPartAsset)=>void}) {
  const imageRef=useRef<HTMLImageElement>(null);
- const [part,setPart]=useState<RigPartName>("head");
+ const [part,setPart]=useState<RigPartName | "crown">("head");
  const [points,setPoints]=useState<{x:number;y:number}[]>([]);
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
@@ -35,7 +35,7 @@ export default function OrBiPartCutter({onCreate}:{onCreate:(part:RigPartName,as
    const data=canvas.toDataURL("image/png");
    if(data.length>2500000)throw new Error("This cutout is too large. Select a smaller area.");
    const centerX=(minX+cw/2)/w,centerY=(minY+ch/2)/h;
-   const layout:Record<RigPartName,{pivotX:number;pivotY:number}>={cape:{pivotX:50,pivotY:12},leftLeg:{pivotX:50,pivotY:8},rightLeg:{pivotX:50,pivotY:8},torso:{pivotX:50,pivotY:45},leftArm:{pivotX:82,pivotY:15},rightArm:{pivotX:18,pivotY:15},head:{pivotX:50,pivotY:78}};
+   const layout:Record<RigPartName | "crown",{pivotX:number;pivotY:number}>={crown:{pivotX:50,pivotY:90},cape:{pivotX:50,pivotY:12},leftLeg:{pivotX:50,pivotY:8},rightLeg:{pivotX:50,pivotY:8},torso:{pivotX:50,pivotY:45},leftArm:{pivotX:82,pivotY:15},rightArm:{pivotX:18,pivotY:15},head:{pivotX:50,pivotY:78}};
    const pos=layout[part];
    const asset:RigPartAsset={id:crypto.randomUUID(),name:OPTIONS.find(o=>o.id===part)!.label,image:data,x:12+centerX*76,y:9+centerY*82,width:Math.max(5,(cw/w)*76),pivotX:pos.pivotX,pivotY:pos.pivotY,rotation:0,visible:true};
    onCreate(part,asset);setPoints([]);setError("");setBusy(false);
@@ -44,7 +44,7 @@ export default function OrBiPartCutter({onCreate}:{onCreate:(part:RigPartName,as
  return <div className="inspector-content">
   <div className="section-label"><span>OrBi part cutter</span><span className="muted">Polygon selection</span></div>
   <div className="notice"><Layers3 size={16}/><span><strong>Cut the original artwork into real layers</strong><small>Choose a part, then click around its outline. The selected pixels are exported as a transparent PNG; the original design is not redrawn.</small></span></div>
-  <label className="range-control"><span>Body part</span><select value={part} onChange={e=>{setPart(e.target.value as RigPartName);setPoints([]);}}>{OPTIONS.map(o=><option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
+  <label className="range-control"><span>Body part</span><select value={part} onChange={e=>{setPart(e.target.value as RigPartName | "crown");setPoints([]);}}>{OPTIONS.map(o=><option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
   <div className="orbi-cutter-canvas" onClick={addPoint}>
    <img ref={imageRef} src={SOURCE} crossOrigin="anonymous" alt="Original OrBi base artwork" draggable={false}/>
    <svg viewBox="0 0 1000 1000" preserveAspectRatio="none">
