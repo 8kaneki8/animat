@@ -107,11 +107,16 @@ function extractSprites(image: HTMLImageElement): SpritePart[] {
     crop.width = boxW; crop.height = boxH;
     const cropCtx = crop.getContext("2d");
     if (!cropCtx) continue;
-    cropCtx.drawImage(canvas, minX, minY, boxW, boxH, 0, 0, boxW, boxH);
-    const mask = cropCtx.getImageData(0, 0, boxW, boxH);
-    for (let y = 0; y < boxH; y++) for (let x = 0; x < boxW; x++) {
-      const original = (minY + y) * width + minX + x;
-      if (!seen[original] || !foreground[original]) mask.data[(y * boxW + x) * 4 + 3] = 0;
+    const component = queue.slice(0, tail);
+    const mask = cropCtx.createImageData(boxW, boxH);
+    for (let n = 0; n < component.length; n++) {
+      const original = component[n], ox = original % width, oy = Math.floor(original / width);
+      const sourceIndex = original * 4;
+      const targetIndex = ((oy - minY) * boxW + (ox - minX)) * 4;
+      mask.data[targetIndex] = data[sourceIndex];
+      mask.data[targetIndex + 1] = data[sourceIndex + 1];
+      mask.data[targetIndex + 2] = data[sourceIndex + 2];
+      mask.data[targetIndex + 3] = data[sourceIndex + 3];
     }
     cropCtx.putImageData(mask, 0, 0);
     parts.push({
@@ -180,7 +185,7 @@ export default function OrBiSpriteExtractor({ onCreate }: { onCreate: (part: Par
     {!busy && !error && <>
       <div className="section-label"><span>Detected artwork pieces</span><span className="muted">Select one to preview</span></div>
       <div className="sprite-candidate-grid">{parts.map((item, index) => <button key={item.id} className={"sprite-candidate " + (selected === item.id ? "active" : "")} onClick={() => setSelected(item.id)}><span className="sprite-thumb"><img src={item.image} alt={"Detected piece " + (index + 1)}/></span><small>Piece {index + 1}</small><small>{Math.round(item.width * 100)}% × {Math.round(item.height * 100)}%</small></button>)}</div>
-      {selectedPart && <div className="sprite-assign"><div className="sprite-large-preview"><img src={selectedPart.image} alt="Selected extracted artwork"/></div><label className="range-control"><span>Assign as</span><select value={choice} onChange={e => setChoice(e.target.value as PartChoice)}>{CHOICES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label><button className="button primary reference-action" onClick={() => assign(selectedPart}>Add selected piece to OrBi rig</button></div>}
+      {selectedPart && <div className="sprite-assign"><div className="sprite-large-preview"><img src={selectedPart.image} alt="Selected extracted artwork"/></div><label className="range-control"><span>Assign as</span><select value={choice} onChange={e => setChoice(e.target.value as PartChoice)}>{CHOICES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label><button className="button primary reference-action" onClick={() => assign(selectedPart)}>Add selected piece to OrBi rig</button></div>}
       {!parts.length && <div className="notice"><Check size={16}/><span><strong>All detected pieces assigned</strong><small>Switch to Rigging to position the layers and adjust their joint pivots.</small></span></div>}
     </>}
     <div className="notice"><Activity size={16}/><span><strong>Extraction limitation</strong><small>Automatic separation works best when pieces have transparent gaps. If artwork overlaps or touches, connected parts may be detected as one. Hidden pixels behind other layers cannot be recreated from a flattened image.</small></span></div>
