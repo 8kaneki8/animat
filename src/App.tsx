@@ -97,7 +97,7 @@ export default function App(){
    const ctx=canvas.getContext("2d");if(!ctx)throw new Error("Canvas unavailable");ctx.drawImage(img,0,0,canvas.width,canvas.height);
    const image=canvas.toDataURL("image/png");
    if(image.length>3500000){setNotice("This skin is too detailed for browser storage. Try a smaller image.");return;}
-   const asset:SkinAsset={id:crypto.randomUUID(),name:file.name.replace(/\\.[^.]+$/,""),filename:file.name,image};
+   const asset:SkinAsset={id:crypto.randomUUID(),name:file.name.replace(/\.[^.]+$/,""),filename:file.name,image};
    setProject(p=>({...p,skins:[...p.skins,asset],activeSkinId:asset.id}));setNotice("Skin added to your local collection");
   }catch{setNotice("Could not import this skin image");}
  };
