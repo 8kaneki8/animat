@@ -127,3 +127,5 @@
 .rig-part-file span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#b9bbca;font-size:9px}
 .rig-upload{position:relative;overflow:hidden;margin-top:8px;cursor:pointer}
 .rig-upload input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+
+.orbi-rig-accessory{position:absolute;z-index:8;width:clamp(42px,13%,110px);height:auto;max-height:35%;object-fit:contain;filter:drop-shadow(0 5px 8px #0008);pointer-events:none;user-select:none;-webkit-user-drag:none}
