@@ -8,7 +8,7 @@ type Props = {
   motion: string;
   skinSrc?: string;
   skinLabel?: string;
-  accessories?: { id:string; name:string; image:string; x:number; y:number; scale:number; rotation:number }[];
+  accessories?: { id:string; name:string; image:string; x:number; y:number; scale:number; rotation:number; visible?:boolean }[];
 };
 
 // The approved base character is always the foundation. Skins are optional artwork layers.
@@ -32,7 +32,7 @@ export default function OrBi2D({ expression, motion, skinSrc, skinLabel, accesso
         {skinSrc && <img className="orbi-real-art orbi-skin-art" src={skinSrc} alt={`OrBi skin — ${skinLabel || "Custom outfit"}`} draggable={false} />}
       </div>
       <div className="orbi-accessory-layer" aria-label="Character accessories">
-        {accessories.map((item) => <img key={item.id} src={item.image} alt={item.name} title={item.name} draggable={false} style={{ left: `${item.x}%`, top: `${item.y}%`, transform: `translate(-50%, -50%) rotate(${item.rotation}deg) scale(${item.scale})` }} />)}
+        {accessories.filter((item) => item.visible !== false).map((item) => <img key={item.id} src={item.image} alt={item.name} title={item.name} draggable={false} style={{ left: `${item.x}%`, top: `${item.y}%`, transform: `translate(-50%, -50%) rotate(${item.rotation}deg) scale(${item.scale})` }} />)}
       </div>
 
       <div className="orbi2d-caption">
