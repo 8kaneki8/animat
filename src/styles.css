@@ -59,3 +59,20 @@
 .orbi-reference-tab-status{font-size:7px;color:#9296aa}
 .orbi-reference-tab.active .orbi-reference-tab-status{color:#d1b8ff}
 @media(max-width:650px){.orbi-reference-switcher{top:43px;left:10px}.orbi-reference-tab{min-width:100px;padding:7px 8px}.orbi-real-stage{margin-top:24px}}
+
+
+/* Skin and emote asset libraries */
+.skin-library,.emote-library{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.skin-library-item,.emote-card{display:flex;align-items:center;gap:8px;padding:7px;border:1px solid #ffffff14;border-radius:10px;background:#ffffff05}
+.skin-library-item.active,.emote-card:focus-within{border-color:#a78bfa88;background:#8b5cf610}
+.skin-library-select,.emote-apply{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.skin-library-select img{width:54px;height:54px;object-fit:contain;border-radius:7px;background:#0c0e18}
+.skin-library-select span,.emote-apply span:not(.emote-face){min-width:0;display:flex;flex-direction:column;gap:4px}
+.skin-library-select strong,.emote-apply strong{font-size:11px;color:#eeeaf8}
+.skin-library-select small,.emote-apply small{font-size:9px;color:#9694a8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skin-delete{width:30px;height:30px;display:grid;place-items:center;border:1px solid #ffffff12;border-radius:7px;background:#ffffff06;color:#a7a2b7;cursor:pointer}
+.skin-delete:hover{color:#ff9caa;border-color:#ff718044}
+.reference-empty.compact{min-height:126px;margin-top:12px;padding:18px}
+.emote-face{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;border-radius:9px;background:#8b5cf61a;color:#d9c6ff;font-size:19px}
+.emote-apply>svg{margin-left:auto;color:#bda5ff}
+.skin-library-select:hover,.emote-apply:hover{opacity:.85}
