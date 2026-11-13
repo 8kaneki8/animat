@@ -1,3 +1,4 @@
+import { Layers3, ScanSearch } from "lucide-react";
 import { useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import type { RigPartAsset, RigPartName } from "./OrBiRig2D";
