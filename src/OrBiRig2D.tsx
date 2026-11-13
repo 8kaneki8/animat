@@ -31,6 +31,7 @@ export default function OrBiRig2D({ parts, motion, paused, accessories = [] }: {
   parts: Partial<Record<RigPartName, RigPartAsset>>;
   motion: RigMotion;
   paused: boolean;
+  accessories?: { id:string; name:string; image:string; x:number; y:number; scale:number; rotation:number; visible?:boolean }[];
 }) {
   const ordered = PARTS.filter((part) => parts[part.id]?.visible !== false && parts[part.id]?.image);
   return (
