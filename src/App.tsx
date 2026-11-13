@@ -83,7 +83,7 @@ export default function App(){
  };
  const patchScale=(part:Part,value:number)=>setProject(p=>({...p,scale:{...p.scale,[part]:value}}));
  const patchPart=(part:Part,value:boolean)=>setProject(p=>({...p,parts:{...p.parts,[part]:value}}));
- const save=()=>{localStorage.setItem("animat-project-v1",JSON.stringify(project));setSaved(true);setNotice("Project saved in this browser");window.setTimeout(()=>setSaved(false),1800);};
+ const save=()=>{try{localStorage.setItem("animat-project-v1",JSON.stringify(project));setSaved(true);setNotice("Project saved in this browser");window.setTimeout(()=>setSaved(false),1800);}catch{setSaved(false);setNotice("Browser storage is full. Export the project and remove large skin images.");}};
  const exportProject=()=>{const blob=new Blob([JSON.stringify(project,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=(project.name.trim()||"animat-character").replace(/[^a-z0-9-_]/gi,"-")+".animat.json";a.click();URL.revokeObjectURL(url);setNotice("Project file exported");};
  const importProject=(e:ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(String(reader.result));if(!data||typeof data!=="object"||!data.scale||!data.parts)throw new Error("Invalid project");setProject({...defaults,...data});setNotice("Project imported successfully");}catch{setNotice("Could not import this project file");}};reader.readAsText(file);e.target.value="";};
  const addSkin=async(file?:File)=>{
@@ -96,6 +96,7 @@ export default function App(){
    const scale=Math.min(1,1400/Math.max(img.width,img.height));const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));
    const ctx=canvas.getContext("2d");if(!ctx)throw new Error("Canvas unavailable");ctx.drawImage(img,0,0,canvas.width,canvas.height);
    const image=canvas.toDataURL("image/png");
+   if(image.length>3500000){setNotice("This skin is too detailed for browser storage. Try a smaller image.");return;}
    const asset:SkinAsset={id:crypto.randomUUID(),name:file.name.replace(/\\.[^.]+$/,""),filename:file.name,image};
    setProject(p=>({...p,skins:[...p.skins,asset],activeSkinId:asset.id}));setNotice("Skin added to your local collection");
   }catch{setNotice("Could not import this skin image");}
