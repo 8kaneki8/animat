@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import type { RigPartAsset, RigPartName } from "./OrBiRig2D";
 
@@ -12,10 +12,8 @@ export default function OrBiPartCutter({onCreate}:{onCreate:(part:RigPartName,as
  const imageRef=useRef<HTMLImageElement>(null);
  const [part,setPart]=useState<RigPartName>("head");
  const [points,setPoints]=useState<{x:number;y:number}[]>([]);
- const [size,setSize]=useState({w:0,h:0});
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
- useEffect(()=>{const img=imageRef.current;if(!img)return;const update=()=>setSize({w:img.clientWidth,h:img.clientHeight});update();const observer=new ResizeObserver(update);observer.observe(img);return()=>observer.disconnect();},[]);
  const addPoint=(e:MouseEvent<HTMLDivElement>)=>{
   const rect=e.currentTarget.getBoundingClientRect();
   setPoints(p=>[...p,{x:Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width)),y:Math.max(0,Math.min(1,(e.clientY-rect.top)/rect.height))}]);
