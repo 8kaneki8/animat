@@ -8,6 +8,7 @@ type Props = {
   motion: string;
   artworkSrc?: string;
   artworkLabel?: string;
+  accessories?: { id:string; name:string; image:string; x:number; y:number; scale:number; rotation:number }[];
 };
 
 // Both owner-provided reference images are kept as source artwork.
@@ -83,6 +84,9 @@ export default function OrBi2D({ expression, motion, artworkSrc, artworkLabel, a
           onLoad={() => { if (!artworkSrc) markLoaded(selected.id); }}
           onError={() => { if (!artworkSrc) markFailed(selected.id); }}
         />
+      </div>
+      <div className="orbi-accessory-layer" aria-label="Character accessories">
+        {accessories.map((item) => <img key={item.id} src={item.image} alt={item.name} title={item.name} draggable={false} style={{ left: `${item.x}%`, top: `${item.y}%`, transform: `translate(-50%, -50%) rotate(${item.rotation}deg) scale(${item.scale})` }} />)}
       </div>
 
       <div className="orbi2d-caption">
