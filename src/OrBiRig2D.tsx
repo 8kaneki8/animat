@@ -27,7 +27,7 @@ const PARTS: { id: RigPartName; label: string; z: number }[] = [
 
 export const RIG_PARTS = PARTS;
 
-export default function OrBiRig2D({ parts, motion, paused }: {
+export default function OrBiRig2D({ parts, motion, paused, accessories = [] }: {
   parts: Partial<Record<RigPartName, RigPartAsset>>;
   motion: RigMotion;
   paused: boolean;
@@ -48,7 +48,7 @@ export default function OrBiRig2D({ parts, motion, paused }: {
         };
         return <div key={part.id} className={`orbi-rig-anchor rig-part-${id}`} style={style}><img className="orbi-rig-part" src={part.image} alt={part.name} draggable={false} /></div>;
       })}
-      {!ordered.length && <div className="orbi-rig-empty">Add transparent body-part images in the Rigging panel to activate the skeletal character.</div>}
+      {accessories.filter((item) => item.visible !== false).map((item) => <img key={item.id} className="orbi-rig-accessory" src={item.image} alt={item.name} style={{left:`${item.x}%`,top:`${item.y}%`,transform:`translate(-50%,-50%) rotate(${item.rotation}deg) scale(${item.scale})`}} />)}
     </div>
   );
 }
