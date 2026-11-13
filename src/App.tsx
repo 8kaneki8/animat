@@ -139,7 +139,7 @@ export default function App(){
   }catch{setNotice("Could not import this body part");}
  };
  const updateRigPart=(part:RigPartName,values:Partial<RigPartAsset>)=>setProject(p=>({...p,rigParts:{...p.rigParts,[part]:p.rigParts[part]?{...p.rigParts[part]!,...values}:p.rigParts[part]}}));
- const createCutRigPart=(part:RigPartName,asset:RigPartAsset)=>{setProject(p=>({...p,rigParts:{...p.rigParts,[part]:asset},mode:"OrBi 2D"}));setNotice(RIG_PARTS.find(x=>x.id===part)?.label+" cut from original OrBi artwork");};
+ const createCutRigPart=(part:RigPartName | "crown",asset:RigPartAsset)=>{if(part==="crown"){const accessory:AccessoryAsset={id:asset.id,name:"Crown",image:asset.image,x:asset.x,y:asset.y,scale:1,rotation:0,visible:true};setProject(p=>({...p,accessories:[...p.accessories,accessory],mode:"OrBi 2D"}));setPanel("Accessories");setNotice("Crown cut as a separate accessory");return;}setProject(p=>({...p,rigParts:{...p.rigParts,[part]:asset},mode:"OrBi 2D"}));setNotice(RIG_PARTS.find(x=>x.id===part)?.label+" cut from original OrBi artwork");};
  const addEmote=()=>{
   const name=window.prompt("Name this emote");
   if(!name?.trim())return;
