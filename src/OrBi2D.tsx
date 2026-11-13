@@ -26,7 +26,7 @@ const ORBI_REFERENCES = [
 ] as const;
 
 export default function OrBi2D({ expression, motion }: Props) {
-  const [activeReference, setActiveReference] = useState(ORBI_REFERENCES[0].id);
+  const [activeReference, setActiveReference] = useState<string>(ORBI_REFERENCES[0].id);
   const [loadedReferences, setLoadedReferences] = useState<string[]>([]);
   const [failedReferences, setFailedReferences] = useState<string[]>([]);
   const selected = ORBI_REFERENCES.find((item) => item.id === activeReference) ?? ORBI_REFERENCES[0];
