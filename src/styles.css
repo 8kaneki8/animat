@@ -35,6 +35,9 @@
 .orbit-two{width:min(78%,520px);border-color:#76e8ff14;transform:rotate(55deg) scaleY(.62)}
 .orbi-real-stage{position:relative;z-index:1;width:min(76%,560px);height:82%;display:grid;place-items:center;animation:orbi-real-idle 3.6s ease-in-out infinite;transform-origin:50% 65%}
 .orbi-real-art{display:block;width:100%;height:100%;object-fit:contain;object-position:center;filter:drop-shadow(0 22px 28px #05030b88);user-select:none;-webkit-user-drag:none}
+.orbi-base-art,.orbi-skin-art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center}
+.orbi-base-art{z-index:1}
+.orbi-skin-art{z-index:2;pointer-events:none}
 .orbi-real-note{position:absolute;right:16px;bottom:15px;z-index:2;font-size:8px;color:#a9a2bb;letter-spacing:.4px}
 .orbi2d-caption{position:absolute;z-index:2;bottom:15px;left:17px;display:flex;align-items:center;gap:8px;font-size:8px;font-weight:700;letter-spacing:1.1px;color:#c8b7eb}
 .orbi2d-live-dot{width:6px;height:6px;border-radius:50%;background:#76e8ff;box-shadow:0 0 10px #76e8ff}
