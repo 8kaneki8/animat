@@ -1,3 +1,4 @@
+import { Activity, Check, Layers3 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { RigPartAsset, RigPartName } from "./OrBiRig2D";
 
