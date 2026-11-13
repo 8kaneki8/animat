@@ -89,3 +89,41 @@
 .accessory-title img{width:42px;height:42px;object-fit:contain;border-radius:7px;background:#0c0e18}
 .accessory-title strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#e5e0f1}
 .accessory-editor .range-control{margin:11px 0}
+
+
+/* Modular 2D skeletal rig */
+.orbi-rig-stage{position:absolute;inset:0;overflow:hidden;isolation:isolate;background:radial-gradient(ellipse at 50% 44%,#30234b 0%,#171426 42%,#10131e 78%)}
+.orbi-rig-anchor{position:absolute;height:auto;display:block;pointer-events:none}
+.orbi-rig-part{display:block;width:100%;height:auto;max-height:78vh;object-fit:contain;filter:drop-shadow(0 8px 12px #05030b66);transform-origin:50% 12%;user-select:none;-webkit-user-drag:none}
+.rig-part-head .orbi-rig-part{transform-origin:50% 82%}
+.rig-part-leftArm .orbi-rig-part{transform-origin:82% 15%}
+.rig-part-rightArm .orbi-rig-part{transform-origin:18% 15%}
+.rig-part-leftLeg .orbi-rig-part,.rig-part-rightLeg .orbi-rig-part{transform-origin:50% 8%}
+.rig-part-cape .orbi-rig-part{transform-origin:50% 12%}
+.orbi-rig-empty{position:absolute;inset:20%;display:grid;place-items:center;text-align:center;color:#c6b5e7;font-size:12px;line-height:1.7;padding:20px;border:1px dashed #a78bfa66;border-radius:14px;background:#0b0d1477}
+.rig-paused .orbi-rig-part{animation-play-state:paused!important}
+.rig-motion-idle .rig-part-head .orbi-rig-part{animation:rig-head-idle 3.2s ease-in-out infinite}
+.rig-motion-idle .rig-part-leftArm .orbi-rig-part,.rig-motion-idle .rig-part-rightArm .orbi-rig-part{animation:rig-arm-idle 3.2s ease-in-out infinite}
+.rig-motion-idle .rig-part-cape .orbi-rig-part{animation:rig-cape 2.6s ease-in-out infinite}
+.rig-motion-wave .rig-part-rightArm .orbi-rig-part{animation:rig-wave 1.05s ease-in-out infinite}
+.rig-motion-wave .rig-part-head .orbi-rig-part{animation:rig-head-idle 2.2s ease-in-out infinite}
+.rig-motion-walk .rig-part-leftLeg .orbi-rig-part{animation:rig-step-left .65s ease-in-out infinite}
+.rig-motion-walk .rig-part-rightLeg .orbi-rig-part{animation:rig-step-right .65s ease-in-out infinite}
+.rig-motion-walk .rig-part-leftArm .orbi-rig-part{animation:rig-step-right .65s ease-in-out infinite}
+.rig-motion-walk .rig-part-rightArm .orbi-rig-part{animation:rig-step-left .65s ease-in-out infinite}
+.rig-motion-talk .rig-part-head .orbi-rig-part{animation:rig-talk .28s ease-in-out infinite alternate}
+.rig-motion-talk .rig-part-leftArm .orbi-rig-part,.rig-motion-talk .rig-part-rightArm .orbi-rig-part{animation:rig-talk-arms .6s ease-in-out infinite alternate}
+@keyframes rig-head-idle{0%,100%{transform:rotate(-1deg) translateY(0)}50%{transform:rotate(1.4deg) translateY(-3px)}}
+@keyframes rig-arm-idle{0%,100%{transform:rotate(0)}50%{transform:rotate(-2deg)}}
+@keyframes rig-cape{0%,100%{transform:skewX(-1deg)}50%{transform:skewX(1.5deg)}}
+@keyframes rig-wave{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(-48deg)}}
+@keyframes rig-step-left{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(12deg)}}
+@keyframes rig-step-right{0%,100%{transform:rotate(12deg)}50%{transform:rotate(-12deg)}}
+@keyframes rig-talk{from{transform:translateY(0) rotate(-1deg)}to{transform:translateY(-2px) rotate(1deg)}}
+@keyframes rig-talk-arms{from{transform:rotate(-3deg)}to{transform:rotate(7deg)}}
+.rig-part-editor{padding:11px 0;border-bottom:1px solid #ffffff12}
+.rig-part-file{display:flex;align-items:center;gap:9px;margin:8px 0}
+.rig-part-file img{width:42px;height:42px;object-fit:contain;background:#10131e;border-radius:7px}
+.rig-part-file span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#b9bbca;font-size:9px}
+.rig-upload{position:relative;overflow:hidden;margin-top:8px;cursor:pointer}
+.rig-upload input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
