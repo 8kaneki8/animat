@@ -25,11 +25,11 @@ const ORBI_REFERENCES = [
   },
 ] as const;
 
-export default function OrBi2D({ expression, motion }: Props) {
+export default function OrBi2D({ expression, motion, artworkSrc, artworkLabel }: Props) {
   const [activeReference, setActiveReference] = useState<string>(ORBI_REFERENCES[0].id);
   const [loadedReferences, setLoadedReferences] = useState<string[]>([]);
   const [failedReferences, setFailedReferences] = useState<string[]>([]);
-  const selected = ORBI_REFERENCES.find((item) => item.id === activeReference) ?? ORBI_REFERENCES[0];
+  const selected = ORBI_REFERENCES.find((item) => item.id === activeReference) ?? ORBI_REFERENCES[0];\n  const artwork = artworkSrc ? { src: artworkSrc, label: artworkLabel || "Custom OrBi skin", description: "Imported skin artwork" } : selected;
   const mood = expression.toLowerCase();
   const movement = motion.toLowerCase();
 
@@ -71,10 +71,10 @@ export default function OrBi2D({ expression, motion }: Props) {
         ))}
       </div>
 
-      <div className={`orbi-real-stage mood-${mood}`} key={selected.id}>
+      <div className={`orbi-real-stage mood-${mood}`} key={artwork.src}>
         <img
           className="orbi-real-art"
-          src={selected.src}
+          src={artwork.src}
           alt={`OrBi original artwork — ${selected.label}`}
           draggable={false}
           onLoad={() => markLoaded(selected.id)}
@@ -86,7 +86,7 @@ export default function OrBi2D({ expression, motion }: Props) {
         <span className="orbi2d-live-dot" /> ORBI · ORIGINAL ARTWORK
       </div>
       <div className="orbi-real-note">
-        {selected.description} · {expression} · {motion}
+        {artwork.description} · {expression} · {motion}
       </div>
     </div>
   );
