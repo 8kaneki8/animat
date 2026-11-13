@@ -1,17 +1,22 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { ContactShadows, Environment, OrbitControls, RoundedBox, Sphere } from "@react-three/drei";
 import { Activity, Box, Check, ChevronDown, CircleHelp, Eye, Layers3, Maximize2, Move3D, Palette, Play, Plus, RotateCcw, Save, Settings2, SlidersHorizontal, Sparkles, WandSparkles } from "lucide-react";
-import * as THREE from "three";
+import { useFrame } from "@react-three/fiber";
+import type { Group } from "three";
 
 type Expression = "Neutral" | "Happy" | "Curious" | "Sleepy";
 type Mode = "Universal Studio" | "OrBi Creator";
 
 function Character({ body, accent, eyes, expression, animate }: { body: string; accent: string; eyes: string; expression: Expression; animate: boolean }) {
+  const root = useRef<Group>(null);
+  useFrame((state) => {
+    if (root.current) root.current.position.y = -0.15 + (animate ? Math.sin(state.clock.elapsedTime * 1.8) * 0.045 : 0);
+  });
   const eyeScale = expression === "Sleepy" ? [0.28, 0.08, 0.12] as [number, number, number] : [0.22, 0.27, 0.12] as [number, number, number];
   const browTilt = expression === "Curious" ? -0.18 : 0;
   return (
-    <group position={[0, -0.15, 0]}>
+    <group ref={root} position={[0, -0.15, 0]}>
       <group>
         <RoundedBox args={[1.38, 1.55, 0.92]} radius={0.32} smoothness={5} position={[0, 0.05, 0]}>
           <meshStandardMaterial color={body} roughness={0.3} metalness={0.12} />
