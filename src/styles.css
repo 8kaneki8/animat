@@ -49,3 +49,13 @@
 @keyframes orbi-real-wave{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-5px) rotate(2deg)}}
 @keyframes orbi-real-talk{from{transform:translateY(0) scale(1)}to{transform:translateY(-2px) scale(1.012)}}
 @media(max-width:650px){.orbi-real-stage{width:88%;height:76%}.orbi-real-note{bottom:35px;left:17px;right:auto}}
+
+
+/* OrBi source selector — both official references remain unmodified */
+.orbi-reference-switcher{position:absolute;z-index:4;top:48px;left:16px;display:flex;gap:7px;max-width:calc(100% - 32px)}
+.orbi-reference-tab{min-width:112px;display:flex;flex-direction:column;gap:4px;padding:8px 10px;border:1px solid #ffffff20;border-radius:8px;background:#0b0d14d9;color:#b9bbca;text-align:left;backdrop-filter:blur(10px)}
+.orbi-reference-tab.active{border-color:#b794ff99;background:#39265dcc;color:#f1eaff;box-shadow:0 0 18px #8b5cf622}
+.orbi-reference-tab-title{font-size:9px;font-weight:700;letter-spacing:.25px}
+.orbi-reference-tab-status{font-size:7px;color:#9296aa}
+.orbi-reference-tab.active .orbi-reference-tab-status{color:#d1b8ff}
+@media(max-width:650px){.orbi-reference-switcher{top:43px;left:10px}.orbi-reference-tab{min-width:100px;padding:7px 8px}.orbi-real-stage{margin-top:24px}}
