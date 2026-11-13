@@ -20,9 +20,9 @@ const PARTS: { id: RigPartName; label: string; z: number }[] = [
   { id: "leftLeg", label: "Left leg", z: 2 },
   { id: "rightLeg", label: "Right leg", z: 3 },
   { id: "torso", label: "Torso", z: 4 },
-  { id: "leftArm", label: "Left arm", z: 5 },
-  { id: "rightArm", label: "Right arm", z: 6 },
-  { id: "head", label: "Head", z: 7 },
+  { id: "head", label: "Head", z: 5 },
+  { id: "leftArm", label: "Left arm", z: 6 },
+  { id: "rightArm", label: "Right arm", z: 7 },
 ];
 
 export const RIG_PARTS = PARTS;
