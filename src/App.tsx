@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, Environment, OrbitControls, RoundedBox, Sphere } from "@react-three/drei";
-import { Activity, Box, Check, Download, Eye, EyeOff, ImagePlus, Layers3, Palette, RotateCcw, Save, ScanSearch, Sparkles, Upload, WandSparkles, X, Plus, Trash2, Smile } from "lucide-react";
+import { Activity, Box, Check, Download, Eye, EyeOff, ImagePlus, Layers3, Palette, RotateCcw, Save, ScanSearch, Sparkles, Upload, WandSparkles, X, Plus, Trash2, Smile, Play } from "lucide-react";
 import type { Group } from "three";
 import OrBi2D from "./OrBi2D";
 
