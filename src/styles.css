@@ -76,3 +76,13 @@
 .emote-face{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;border-radius:9px;background:#8b5cf61a;color:#d9c6ff;font-size:19px}
 .emote-apply>svg{margin-left:auto;color:#bda5ff}
 .skin-library-select:hover,.emote-apply:hover{opacity:.85}
+
+
+/* Accessory library overlays — independent transparent artwork layers */
+.orbi-accessory-layer{position:absolute;z-index:3;inset:0;pointer-events:none}
+.orbi-accessory-layer img{position:absolute;width:clamp(42px,13%,110px);height:auto;max-height:35%;object-fit:contain;filter:drop-shadow(0 5px 8px #0008);transform-origin:center;user-select:none;-webkit-user-drag:none}
+.accessory-editor{margin-top:13px;padding:11px;border:1px solid #ffffff16;border-radius:10px;background:#ffffff05}
+.accessory-title{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.accessory-title img{width:42px;height:42px;object-fit:contain;border-radius:7px;background:#0c0e18}
+.accessory-title strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#e5e0f1}
+.accessory-editor .range-control{margin:11px 0}
