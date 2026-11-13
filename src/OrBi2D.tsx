@@ -6,6 +6,8 @@ type Props = {
   eyes: string;
   expression: string;
   motion: string;
+  artworkSrc?: string;
+  artworkLabel?: string;
 };
 
 // Both owner-provided reference images are kept as source artwork.
@@ -29,7 +31,8 @@ export default function OrBi2D({ expression, motion, artworkSrc, artworkLabel }:
   const [activeReference, setActiveReference] = useState<string>(ORBI_REFERENCES[0].id);
   const [loadedReferences, setLoadedReferences] = useState<string[]>([]);
   const [failedReferences, setFailedReferences] = useState<string[]>([]);
-  const selected = ORBI_REFERENCES.find((item) => item.id === activeReference) ?? ORBI_REFERENCES[0];\n  const artwork = artworkSrc ? { src: artworkSrc, label: artworkLabel || "Custom OrBi skin", description: "Imported skin artwork" } : selected;
+  const selected = ORBI_REFERENCES.find((item) => item.id === activeReference) ?? ORBI_REFERENCES[0];
+  const artwork = artworkSrc ? { src: artworkSrc, label: artworkLabel || "Custom OrBi skin", description: "Imported skin artwork" } : selected;
   const mood = expression.toLowerCase();
   const movement = motion.toLowerCase();
 
