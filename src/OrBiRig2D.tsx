@@ -46,7 +46,7 @@ export default function OrBiRig2D({ parts, motion, paused }: {
           transform: `translate(-${part.pivotX}%, -${part.pivotY}%) rotate(${part.rotation}deg)`,
           transformOrigin: `${part.pivotX}% ${part.pivotY}%`,
         };
-        return <img key={part.id} className={`orbi-rig-part rig-part-${id}`} src={part.image} alt={part.name} draggable={false} style={style} />;
+        return <div key={part.id} className={`orbi-rig-anchor rig-part-${id}`} style={style}><img className="orbi-rig-part" src={part.image} alt={part.name} draggable={false} /></div>;
       })}
       {!ordered.length && <div className="orbi-rig-empty">Add transparent body-part images in the Rigging panel to activate the skeletal character.</div>}
     </div>
