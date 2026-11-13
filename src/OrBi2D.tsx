@@ -1,5 +1,3 @@
-import React from "react";
-
 type Props = {
   body: string;
   accent: string;
@@ -16,7 +14,6 @@ export default function OrBi2D({ body, accent, eyes, expression, motion }: Props
   const worried = expression === "Worried";
   const talking = motion === "Talking";
   const waving = motion === "Wave";
-  const idle = motion === "Idle" || motion === "Float";
   return (
     <div className={`orbi2d-scene motion-${motion.toLowerCase()}`} aria-label="OrBi 2D character preview">
       <div className="orbi2d-grid" />
