@@ -7,6 +7,7 @@ import type { Group } from "three";
 
 type Expression = "Neutral" | "Happy" | "Curious" | "Sleepy";
 type Mode = "Universal Studio" | "OrBi Creator";
+type SavedProject = { body?: string; accent?: string; eyes?: string; expression?: Expression };
 
 function Character({ body, accent, eyes, expression, animate }: { body: string; accent: string; eyes: string; expression: Expression; animate: boolean }) {
   const root = useRef<Group>(null);
@@ -81,11 +82,15 @@ function ColorControl({ label, value, onChange }: { label: string; value: string
 }
 
 export default function App() {
+  const [initialProject] = useState<SavedProject>(() => {
+    try { return JSON.parse(localStorage.getItem("animat-project-v1") || "{}") as SavedProject; }
+    catch { return {}; }
+  });
   const [mode, setMode] = useState<Mode>("OrBi Creator");
-  const [body, setBody] = useState("#8B5CF6");
-  const [accent, setAccent] = useState("#E5B8FF");
-  const [eyes, setEyes] = useState("#76E8FF");
-  const [expression, setExpression] = useState<Expression>("Neutral");
+  const [body, setBody] = useState(initialProject.body ?? "#8B5CF6");
+  const [accent, setAccent] = useState(initialProject.accent ?? "#E5B8FF");
+  const [eyes, setEyes] = useState(initialProject.eyes ?? "#76E8FF");
+  const [expression, setExpression] = useState<Expression>(initialProject.expression ?? "Neutral");
   const [animate, setAnimate] = useState(true);
   const [activePanel, setActivePanel] = useState("Appearance");
   const [saved, setSaved] = useState(false);
@@ -99,7 +104,7 @@ export default function App() {
         <div className="top-actions">
           <span className="autosave">Local project</span>
           <button className="button secondary" onClick={() => { setBody("#8B5CF6"); setAccent("#E5B8FF"); setEyes("#76E8FF"); setExpression("Neutral"); }}><RotateCcw size={15} /> Reset</button>
-          <button className="button primary" onClick={() => { setSaved(true); window.setTimeout(() => setSaved(false), 1800); }}><Save size={15} /> {saved ? "Saved" : "Save project"}</button>
+          <button className="button primary" onClick={() => { localStorage.setItem("animat-project-v1", JSON.stringify({ body, accent, eyes, expression, mode })); setSaved(true); window.setTimeout(() => setSaved(false), 1800); }}><Save size={15} /> {saved ? "Saved" : "Save project"}</button>
         </div>
       </header>
 
