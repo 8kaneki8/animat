@@ -1,169 +1,53 @@
-import { useMemo, useRef, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import { ChangeEvent, useRef, useState } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, Environment, OrbitControls, RoundedBox, Sphere } from "@react-three/drei";
-import { Activity, Box, Check, ChevronDown, CircleHelp, Eye, Layers3, Maximize2, Move3D, Palette, Play, Plus, RotateCcw, Save, Settings2, SlidersHorizontal, Sparkles, WandSparkles } from "lucide-react";
-import { useFrame } from "@react-three/fiber";
+import { Activity, Box, Check, Download, Eye, EyeOff, Layers3, Palette, Play, RotateCcw, Save, Sparkles, Upload, WandSparkles } from "lucide-react";
 import type { Group } from "three";
 
-type Expression = "Neutral" | "Happy" | "Curious" | "Sleepy";
+type Expression = "Neutral" | "Happy" | "Curious" | "Sleepy" | "Excited" | "Worried" | "Angry" | "Surprised";
 type Mode = "Universal Studio" | "OrBi Creator";
-type SavedProject = { body?: string; accent?: string; eyes?: string; expression?: Expression };
+type Part = "head" | "body" | "arms" | "legs" | "antenna";
+type Motion = "Idle" | "Float" | "Pulse" | "Off";
+type Project = { name:string; mode:Mode; body:string; accent:string; eyes:string; expression:Expression; motion:Motion; material:string; parts:Record<Part,boolean>; scale:Record<Part,number> };
+const defaults:Project={name:"Untitled character",mode:"OrBi Creator",body:"#8B5CF6",accent:"#E5B8FF",eyes:"#76E8FF",expression:"Neutral",motion:"Idle",material:"Glossy",parts:{head:true,body:true,arms:true,legs:true,antenna:true},scale:{head:1,body:1,arms:1,legs:1,antenna:1}};
+const expressions:Expression[]=["Neutral","Happy","Curious","Sleepy","Excited","Worried","Angry","Surprised"];
+const partNames:Part[]=["head","body","arms","legs","antenna"];
 
-function Character({ body, accent, eyes, expression, animate }: { body: string; accent: string; eyes: string; expression: Expression; animate: boolean }) {
-  const root = useRef<Group>(null);
-  useFrame((state) => {
-    if (root.current) root.current.position.y = -0.15 + (animate ? Math.sin(state.clock.elapsedTime * 1.8) * 0.045 : 0);
-  });
-  const eyeScale = expression === "Sleepy" ? [0.28, 0.08, 0.12] as [number, number, number] : [0.22, 0.27, 0.12] as [number, number, number];
-  const browTilt = expression === "Curious" ? -0.18 : 0;
-  return (
-    <group ref={root} position={[0, -0.15, 0]}>
-      <group>
-        <RoundedBox args={[1.38, 1.55, 0.92]} radius={0.32} smoothness={5} position={[0, 0.05, 0]}>
-          <meshStandardMaterial color={body} roughness={0.3} metalness={0.12} />
-        </RoundedBox>
-        <RoundedBox args={[0.7, 0.18, 0.08]} radius={0.08} position={[0, -0.35, 0.48]}>
-          <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.3} />
-        </RoundedBox>
-        <Sphere args={[0.48, 48, 48]} position={[0, 1.05, 0]}>
-          <meshStandardMaterial color={body} roughness={0.27} metalness={0.1} />
-        </Sphere>
-        <Sphere args={[0.1, 24, 24]} position={[-0.48, 1.08, 0]}>
-          <meshStandardMaterial color={accent} />
-        </Sphere>
-        <Sphere args={[0.1, 24, 24]} position={[0.48, 1.08, 0]}>
-          <meshStandardMaterial color={accent} />
-        </Sphere>
-        {([-1, 1] as const).map((side) => (
-          <group key={side} position={[side * 0.19, 1.08, 0.42]}>
-            <Sphere args={eyeScale}>
-              <meshStandardMaterial color={eyes} emissive={eyes} emissiveIntensity={0.4} />
-            </Sphere>
-            <mesh position={[0, 0.25, 0]} rotation={[0, 0, side * browTilt]}>
-              <boxGeometry args={[0.23, 0.045, 0.04]} />
-              <meshStandardMaterial color={accent} />
-            </mesh>
-          </group>
-        ))}
-        <mesh position={[0, 0.78, 0.45]}>
-          <torusGeometry args={[expression === "Happy" ? 0.105 : 0.07, 0.025, 10, 28, Math.PI]} />
-          <meshStandardMaterial color={accent} />
-        </mesh>
-        <RoundedBox args={[0.24, 0.66, 0.25]} radius={0.1} position={[-0.84, -0.05, 0]}>
-          <meshStandardMaterial color={accent} />
-        </RoundedBox>
-        <RoundedBox args={[0.24, 0.66, 0.25]} radius={0.1} position={[0.84, -0.05, 0]}>
-          <meshStandardMaterial color={accent} />
-        </RoundedBox>
-        <RoundedBox args={[0.38, 0.5, 0.4]} radius={0.12} position={[-0.38, -0.92, 0]}>
-          <meshStandardMaterial color={accent} />
-        </RoundedBox>
-        <RoundedBox args={[0.38, 0.5, 0.4]} radius={0.12} position={[0.38, -0.92, 0]}>
-          <meshStandardMaterial color={accent} />
-        </RoundedBox>
-        <mesh position={[0, 1.55, 0]} rotation={[0, 0, 0.15]}>
-          <cylinderGeometry args={[0.035, 0.035, 0.32, 12]} />
-          <meshStandardMaterial color={accent} />
-        </mesh>
-        <Sphere args={[0.11, 20, 20]} position={[0, 1.73, 0]}>
-          <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.5} />
-        </Sphere>
-      </group>
-      {animate && <mesh position={[0, -1.22, -0.02]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[1.1, 1.14, 64]} />
-        <meshBasicMaterial color={accent} transparent opacity={0.35} />
-      </mesh>}
-    </group>
-  );
+function Character({p}:{p:Project}){
+ const root=useRef<Group>(null);
+ useFrame(({clock})=>{if(!root.current)return;const t=clock.elapsedTime;root.current.position.y=-.18+(p.motion==="Idle"?Math.sin(t*1.7)*.035:p.motion==="Float"?Math.sin(t*1.1)*.19:0);root.current.rotation.y=p.motion==="Idle"?Math.sin(t*.45)*.08:p.motion==="Float"?Math.sin(t*.7)*.16:0;const pulse=p.motion==="Pulse"?1+Math.sin(t*3)*.035:1;root.current.scale.setScalar(pulse);});
+ const rough=p.material==="Matte"?.88:p.material==="Metallic"?.2:.32, metal=p.material==="Metallic"?.78:p.material==="Glossy"?.12:0;
+ const mat=(color:string,emissive=false)=><meshStandardMaterial color={color} roughness={rough} metalness={metal} emissive={emissive?color:"#000000"} emissiveIntensity={emissive?.32:0}/>;
+ const eyeY=p.expression==="Sleepy"?.06:.22;
+ const mouth=p.expression==="Happy"||p.expression==="Excited"?"smile":p.expression==="Surprised"?"round":p.expression==="Angry"||p.expression==="Worried"?"frown":"line";
+ return <group ref={root} position={[0,-.18,0]}>
+  {p.parts.body&&<group scale={[1,p.scale.body,1]}><RoundedBox args={[1.35,1.48,.9]} radius={.31} smoothness={5} position={[0,0,0]}>{mat(p.body)}</RoundedBox><RoundedBox args={[.62,.14,.055]} radius={.06} position={[0,-.33,.47]}>{mat(p.accent,true)}</RoundedBox></group>}
+  {p.parts.head&&<group position={[0,.99,0]} scale={p.scale.head}><Sphere args={[.48,48,48]}>{mat(p.body)}</Sphere>{([-1,1] as const).map(s=><group key={s} position={[s*.19,.02,.42]}><Sphere args={p.expression==="Sleepy"?[.13,.045,.07]:[.105,.14,.075]} position={[0,eyeY,0]}>{mat(p.eyes,true)}</Sphere><mesh position={[0,.39,0]} rotation={[0,0,s*(p.expression==="Curious"?.2:p.expression==="Angry"?.35:0)]}><boxGeometry args={[.22,.045,.04]}/>{mat(p.accent)}</mesh></group>)}<mesh position={[0,-.17,.455]}>{mouth==="round"?<circleGeometry args={[.07,24]}/>:<torusGeometry args={[mouth==="smile"?.105:mouth==="frown"?.075:.065,.018,8,24,Math.PI]}/>}<meshStandardMaterial color={p.accent} side={2}/></mesh></group>}
+  {p.parts.arms&&([-1,1] as const).map(s=><group key={s} position={[s*.78,-.02,0]} scale={[p.scale.arms,1,1]}><RoundedBox args={[.23,.66,.24]} radius={.1} rotation={[0,0,-s*.12]}>{mat(p.accent)}</RoundedBox></group>)}
+  {p.parts.legs&&([-1,1] as const).map(s=><group key={s} position={[s*.34,-.94,0]} scale={[1,p.scale.legs,1]}><RoundedBox args={[.35,.48,.37]} radius={.11}>{mat(p.accent)}</RoundedBox></group>)}
+  {p.parts.antenna&&<group position={[0,1.43,0]} scale={p.scale.antenna}><mesh><cylinderGeometry args={[.025,.025,.28,12]}/>{mat(p.accent)}</mesh><Sphere args={[.095,20,20]} position={[0,.17,0]}>{mat(p.accent,true)}</Sphere></group>}
+ </group>;
 }
+function ColorControl({label,value,onChange}:{label:string;value:string;onChange:(v:string)=>void}){return <label className="color-control"><span>{label}</span><span className="color-input"><input type="color" value={value} onChange={e=>onChange(e.target.value)}/><code>{value.toUpperCase()}</code></span></label>}
+function Range({label,value,min=.5,max=1.7,onChange}:{label:string;value:number;min?:number;max?:number;onChange:(v:number)=>void}){return <label className="range-control"><span>{label}<b>{value.toFixed(2)}×</b></span><input type="range" min={min} max={max} step=".05" value={value} onChange={e=>onChange(Number(e.target.value))}/></label>}
 
-function ColorControl({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="color-control"><span>{label}</span><span className="color-input"><input type="color" value={value} onChange={(event) => onChange(event.target.value)} /><code>{value.toUpperCase()}</code></span></label>;
-}
-
-export default function App() {
-  const [initialProject] = useState<SavedProject>(() => {
-    try { return JSON.parse(localStorage.getItem("animat-project-v1") || "{}") as SavedProject; }
-    catch { return {}; }
-  });
-  const [mode, setMode] = useState<Mode>("OrBi Creator");
-  const [body, setBody] = useState(initialProject.body ?? "#8B5CF6");
-  const [accent, setAccent] = useState(initialProject.accent ?? "#E5B8FF");
-  const [eyes, setEyes] = useState(initialProject.eyes ?? "#76E8FF");
-  const [expression, setExpression] = useState<Expression>(initialProject.expression ?? "Neutral");
-  const [animate, setAnimate] = useState(true);
-  const [activePanel, setActivePanel] = useState("Appearance");
-  const [saved, setSaved] = useState(false);
-  const expressions = useMemo(() => ["Neutral", "Happy", "Curious", "Sleepy"] as Expression[], []);
-
-  return (
-    <main className="app-shell">
-      <header className="topbar">
-        <a className="brand" href="#"><span className="brand-mark"><Sparkles size={18} /></span><span>animat</span><small>STUDIO</small></a>
-        <div className="project-name"><span className="status-dot" /> Untitled character <ChevronDown size={14} /></div>
-        <div className="top-actions">
-          <span className="autosave">Local project</span>
-          <button className="button secondary" onClick={() => { setBody("#8B5CF6"); setAccent("#E5B8FF"); setEyes("#76E8FF"); setExpression("Neutral"); }}><RotateCcw size={15} /> Reset</button>
-          <button className="button primary" onClick={() => { localStorage.setItem("animat-project-v1", JSON.stringify({ body, accent, eyes, expression, mode })); setSaved(true); window.setTimeout(() => setSaved(false), 1800); }}><Save size={15} /> {saved ? "Saved" : "Save project"}</button>
-        </div>
-      </header>
-
-      <div className="workspace">
-        <aside className="leftbar">
-          <div className="mode-switch">
-            <span className="eyebrow">WORKSPACE</span>
-            {(["Universal Studio", "OrBi Creator"] as Mode[]).map((item) => <button key={item} className={mode === item ? "mode active" : "mode"} onClick={() => setMode(item)}><span className="mode-icon">{item === "Universal Studio" ? <Box size={16} /> : <Sparkles size={16} />}</span><span>{item}<small>{item === "Universal Studio" ? "Build any character" : "Advanced OrBi tools"}</small></span>{mode === item && <span className="mode-dot" />}</button>)}
-          </div>
-          <div className="side-divider" />
-          <span className="eyebrow">CREATE</span>
-          {[
-            { name: "Appearance", icon: <Palette size={17} /> },
-            { name: "Expressions", icon: <Eye size={17} /> },
-            { name: "Animation", icon: <Activity size={17} /> },
-            { name: "Parts & Layers", icon: <Layers3 size={17} /> },
-          ].map((item) => <button key={item.name} className={activePanel === item.name ? "nav-item selected" : "nav-item"} onClick={() => setActivePanel(item.name)}>{item.icon}{item.name}</button>)}
-          <div className="side-bottom"><div className="help-card"><CircleHelp size={17} /><span>New to Animat?<small>Explore the studio guide</small></span></div><div className="user-chip"><div className="avatar">A</div><span>Creator workspace<small>Personal project</small></span><Settings2 size={16} /></div></div>
-        </aside>
-
-        <section className="center-stage">
-          <div className="stage-header"><div><span className="eyebrow">{mode === "OrBi Creator" ? "ORBI CREATOR MODE" : "UNIVERSAL CHARACTER MODE"}</span><h1>{activePanel === "Appearance" ? "Character appearance" : activePanel}</h1><p>{activePanel === "Appearance" ? "Shape the look, colors, and personality of your character." : "Explore and adjust your character in the live 3D workspace."}</p></div><div className="stage-tools"><button className="icon-button" title="Move tool"><Move3D size={17} /></button><button className="icon-button" title="Frame character"><Maximize2 size={17} /></button><button className="icon-button" title="View settings"><SlidersHorizontal size={17} /></button></div></div>
-          <div className="viewport">
-            <div className="viewport-grid" />
-            <div className="viewport-label"><span className="live-dot" /> LIVE PREVIEW <span className="viewport-sep">/</span> PERSPECTIVE</div>
-            <Canvas camera={{ position: [4.1, 2.4, 5.5], fov: 38 }} shadows dpr={[1, 1.7]}>
-              <color attach="background" args={["#10131e"]} />
-              <ambientLight intensity={1.1} />
-              <directionalLight position={[4, 6, 5]} intensity={2.1} castShadow />
-              <pointLight position={[-4, 1, -3]} intensity={1.5} color={accent} />
-              <Character body={body} accent={accent} eyes={eyes} expression={expression} animate={animate} />
-              <ContactShadows position={[0, -1.48, 0]} opacity={0.42} scale={5} blur={2.6} />
-              <Environment preset="city" />
-              <OrbitControls enablePan={false} minDistance={3.5} maxDistance={9} target={[0, 0.15, 0]} />
-            </Canvas>
-            <div className="viewport-bottom"><span><span className="keycap">LMB</span> Orbit <span className="keycap">SCROLL</span> Zoom</span><button onClick={() => setAnimate(!animate)} className={animate ? "play-toggle on" : "play-toggle"}>{animate ? <Activity size={14} /> : <Play size={14} />}{animate ? "Idle preview on" : "Preview motion"}</button></div>
-          </div>
-          <div className="timeline-strip"><div className="timeline-title"><span className="eyebrow">QUICK ACCESS</span><span>Prototype controls</span></div><div className="quick-chips">{expressions.map((item) => <button key={item} className={expression === item ? "chip active" : "chip"} onClick={() => setExpression(item)}>{item}</button>)}</div><button className="add-chip" onClick={() => setActivePanel("Animation")}><Plus size={14} /> Add animation</button></div>
-        </section>
-
-        <aside className="inspector">
-          <div className="inspector-head"><div><span className="eyebrow">INSPECTOR</span><h2>{activePanel}</h2></div><button className="icon-button"><Settings2 size={17} /></button></div>
-          {activePanel === "Appearance" && <div className="inspector-content">
-            <div className="section-label"><span>Color palette</span><span className="muted">3 properties</span></div>
-            <div className="control-group"><ColorControl label="Primary shell" value={body} onChange={setBody} /><ColorControl label="Accent details" value={accent} onChange={setAccent} /><ColorControl label="Eye glow" value={eyes} onChange={setEyes} /></div>
-            <div className="panel-divider" />
-            <div className="section-label"><span>Material</span><span className="muted">Preview</span></div>
-            <div className="material-grid"><button className="material active"><span className="material-swatch glossy" />Glossy<Check size={13} /></button><button className="material"><span className="material-swatch matte" />Matte</button><button className="material"><span className="material-swatch metal" />Metallic</button></div>
-            <div className="panel-divider" />
-            <div className="section-label"><span>Character preset</span><span className="muted">Base model</span></div>
-            <button className="preset-card"><div className="preset-thumb"><Sparkles size={23} /></div><span><strong>{mode === "OrBi Creator" ? "OrBi · Base prototype" : "Custom · Starter model"}</strong><small>{mode === "OrBi Creator" ? "Dedicated mascot workspace" : "Universal humanoid base"}</small></span><Check size={15} className="preset-check" /></button>
-            <div className="notice"><WandSparkles size={16} /><span><strong>More control is coming</strong><small>Editable body parts, proportions, and materials are next in the build.</small></span></div>
-          </div>}
-          {activePanel === "Expressions" && <div className="inspector-content"><div className="section-label"><span>Facial expression</span><span className="muted">4 presets</span></div><div className="expression-list">{expressions.map((item, index) => <button key={item} className={expression === item ? "expression active" : "expression"} onClick={() => setExpression(item)}><span className="expression-face">{["•‿•", "⌣‿⌣", "•ᴗ•", "－ᴗ－"][index]}</span><span>{item}</span>{expression === item && <Check size={15} />}</button>)}</div><div className="notice"><Sparkles size={16} /><span><strong>Expression editor</strong><small>Fine controls for eyelids, brows, and mouth will be added in a later milestone.</small></span></div></div>}
-          {activePanel === "Animation" && <div className="inspector-content"><div className="section-label"><span>Motion preview</span><span className="muted">Prototype</span></div><button className={animate ? "toggle-row active" : "toggle-row"} onClick={() => setAnimate(!animate)}><span><Activity size={17} /><strong>Idle motion</strong></span><span className="toggle-pill">{animate ? "ON" : "OFF"}</span></button><div className="animation-card"><div className="animation-icon"><Activity size={19} /></div><div><strong>Idle / Standby</strong><small>Preview state · procedural</small></div><span className="tag">ACTIVE</span></div><div className="notice"><Activity size={16} /><span><strong>Timeline coming next</strong><small>Keyframes, tracks, looping, and animation clips are planned for milestone 4.</small></span></div></div>}
-          {activePanel === "Parts & Layers" && <div className="inspector-content"><div className="section-label"><span>Scene hierarchy</span><span className="muted">Prototype</span></div>{["Character root", "Head", "Eyes", "Body shell", "Arms", "Legs", "Antenna"].map((part, i) => <div className="layer-row" key={part}><span className="layer-indent" style={{ paddingLeft: i === 0 ? 0 : 12 }}><Box size={15} />{part}</span><Eye size={14} className="muted-icon" /></div>)}<div className="notice"><Layers3 size={16} /><span><strong>Part-level editing</strong><small>Selectable meshes and transform controls are planned for milestone 2.</small></span></div></div>}
-          <div className="inspector-footer"><span className="footer-dot" /> All changes preview live <span className="footer-version">v0.1.0</span></div>
-        </aside>
-      </div>
-    </main>
-  );
+export default function App(){
+ const [project,setProject]=useState<Project>(()=>{try{return {...defaults,...JSON.parse(localStorage.getItem("animat-project-v1")||"{}")};}catch{return defaults;}});
+ const [panel,setPanel]=useState("Appearance"),[saved,setSaved]=useState(false),[notice,setNotice]=useState("Ready to create");
+ const patch=(values:Partial<Project>)=>setProject(p=>({...p,...values}));
+ const patchScale=(part:Part,value:number)=>setProject(p=>({...p,scale:{...p.scale,[part]:value}}));
+ const patchPart=(part:Part,value:boolean)=>setProject(p=>({...p,parts:{...p.parts,[part]:value}}));
+ const save=()=>{localStorage.setItem("animat-project-v1",JSON.stringify(project));setSaved(true);setNotice("Project saved in this browser");window.setTimeout(()=>setSaved(false),1800);};
+ const exportProject=()=>{const blob=new Blob([JSON.stringify(project,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=(project.name.trim()||"animat-character").replace(/[^a-z0-9-_]/gi,"-")+".animat.json";a.click();URL.revokeObjectURL(url);setNotice("Project file exported");};
+ const importProject=(e:ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(String(reader.result));if(!data||typeof data!=="object"||!data.scale||!data.parts)throw new Error("Invalid project");setProject({...defaults,...data});setNotice("Project imported successfully");}catch{setNotice("Could not import this project file");}};reader.readAsText(file);e.target.value="";};
+ const reset=()=>{setProject({...defaults});setNotice("Character reset to base settings");};
+ return <main className="app-shell"><header className="topbar"><a className="brand" href="#"><span className="brand-mark"><Sparkles size={18}/></span><span>animat</span><small>STUDIO</small></a><div className="project-name"><span className="status-dot"/><input className="project-title" value={project.name} onChange={e=>patch({name:e.target.value})} aria-label="Project name"/></div><div className="top-actions"><span className="autosave">{notice}</span><button className="button secondary" onClick={reset}><RotateCcw size={14}/> Reset</button><label className="button secondary import-button"><Upload size={14}/> Import<input type="file" accept=".json,.animat.json,application/json" onChange={importProject}/></label><button className="button secondary" onClick={exportProject}><Download size={14}/> Export</button><button className="button primary" onClick={save}><Save size={14}/>{saved?"Saved":"Save"}</button></div></header>
+ <div className="workspace"><aside className="leftbar"><div className="mode-switch"><span className="eyebrow">WORKSPACE</span>{(["Universal Studio","OrBi Creator"] as Mode[]).map(m=><button key={m} className={project.mode===m?"mode active":"mode"} onClick={()=>patch({mode:m})}><span className="mode-icon">{m==="Universal Studio"?<Box size={16}/>:<Sparkles size={16}/>}</span><span>{m}<small>{m==="Universal Studio"?"Build any character":"Advanced OrBi tools"}</small></span>{project.mode===m&&<span className="mode-dot"/>}</button>)}</div><div className="side-divider"/><span className="eyebrow">EDITOR</span>{[{name:"Appearance",icon:<Palette size={17}/>},{name:"Expressions",icon:<Eye size={17}/>},{name:"Animation",icon:<Activity size={17}/>},{name:"Parts & Layers",icon:<Layers3 size={17}/>}].map(x=><button key={x.name} className={panel===x.name?"nav-item selected":"nav-item"} onClick={()=>setPanel(x.name)}>{x.icon}{x.name}</button>)}<div className="side-bottom"><div className="help-card"><WandSparkles size={17}/><span>Creator tools<small>Live 3D editing workspace</small></span></div><div className="user-chip"><div className="avatar">A</div><span>Local workspace<small>Personal project</small></span></div></div></aside>
+ <section className="center-stage"><div className="stage-header"><div><span className="eyebrow">{project.mode==="OrBi Creator"?"ORBI CREATOR MODE":"UNIVERSAL CHARACTER MODE"}</span><h1>{panel==="Appearance"?"Character appearance":panel}</h1><p>Changes update instantly in the interactive 3D viewport.</p></div><span className="viewport-status"><i/> LIVE 3D</span></div><div className="viewport"><div className="viewport-grid"/><div className="viewport-label"><span className="live-dot"/> LIVE PREVIEW <span className="viewport-sep">/</span> PERSPECTIVE</div><Canvas camera={{position:[4.1,2.4,5.5],fov:38}} shadows dpr={[1,1.5]}><color attach="background" args={["#10131e"]}/><ambientLight intensity={1.05}/><directionalLight position={[4,6,5]} intensity={2} castShadow/><pointLight position={[-4,1,-3]} intensity={1.4} color={project.accent}/><Character p={project}/><ContactShadows position={[0,-1.48,0]} opacity={.4} scale={5} blur={2.6}/><Environment preset="city"/><OrbitControls makeDefault enablePan minDistance={3} maxDistance={10} target={[0,.15,0]}/></Canvas><div className="viewport-bottom"><span><span className="keycap">DRAG</span> Orbit <span className="keycap">SCROLL</span> Zoom <span className="keycap">RIGHT DRAG</span> Pan</span><span className="render-tag">PBR MATERIALS</span></div></div><div className="timeline-strip"><div className="timeline-title"><span className="eyebrow">EXPRESSIONS</span><span>Quick facial presets</span></div><div className="quick-chips">{expressions.slice(0,5).map(x=><button key={x} className={project.expression===x?"chip active":"chip"} onClick={()=>patch({expression:x})}>{x}</button>)}</div><button className="add-chip" onClick={()=>setPanel("Expressions")}>All expressions →</button></div></section>
+ <aside className="inspector"><div className="inspector-head"><div><span className="eyebrow">INSPECTOR</span><h2>{panel}</h2></div><span className="inspector-count">{panel==="Expressions"?"08":panel==="Parts & Layers"?"05":"LIVE"}</span></div>
+ {panel==="Appearance"&&<div className="inspector-content"><div className="section-label"><span>Color palette</span><span className="muted">Live preview</span></div><div className="control-group"><ColorControl label="Primary shell" value={project.body} onChange={v=>patch({body:v})}/><ColorControl label="Accent details" value={project.accent} onChange={v=>patch({accent:v})}/><ColorControl label="Eye glow" value={project.eyes} onChange={v=>patch({eyes:v})}/></div><div className="panel-divider"/><div className="section-label"><span>Surface material</span></div><div className="material-grid">{["Glossy","Matte","Metallic"].map(x=><button key={x} className={project.material===x?"material active":"material"} onClick={()=>patch({material:x})}><span className={"material-swatch "+x.toLowerCase()}/>{x}{project.material===x&&<Check size={13}/>}</button>)}</div><div className="notice"><Sparkles size={16}/><span><strong>Live material system</strong><small>Surface roughness and metallic response update in the 3D preview.</small></span></div></div>}
+ {panel==="Expressions"&&<div className="inspector-content"><div className="section-label"><span>Facial presets</span><span className="muted">8 expressions</span></div><div className="expression-list">{expressions.map((x,i)=><button key={x} className={project.expression===x?"expression active":"expression"} onClick={()=>patch({expression:x})}><span className="expression-face">{["•‿•","⌣‿⌣","•ᴗ•","－ᴗ－","✧‿✧","•︵•","ಠ_ಠ","⊙_⊙"][i]}</span><span>{x}</span>{project.expression===x&&<Check size={15}/>}</button>)}</div><div className="notice"><Eye size={16}/><span><strong>Expression presets</strong><small>These are procedural facial presets. Advanced face rig controls are a later milestone.</small></span></div></div>}
+ {panel==="Animation"&&<div className="inspector-content"><div className="section-label"><span>Motion preview</span><span className="muted">Procedural</span></div><div className="motion-list">{(["Idle","Float","Pulse","Off"] as Motion[]).map(x=><button key={x} className={project.motion===x?"motion-option active":"motion-option"} onClick={()=>patch({motion:x})}><Activity size={15}/><span>{x}</span>{project.motion===x&&<Check size={14}/>}</button>)}</div><div className="notice"><Activity size={16}/><span><strong>Motion presets</strong><small>Live procedural motion is active in the viewport. A keyframe timeline is planned next.</small></span></div></div>}
+ {panel==="Parts & Layers"&&<div className="inspector-content"><div className="section-label"><span>Scene hierarchy</span><span className="muted">Visibility & scale</span></div>{partNames.map(part=><div className="part-editor" key={part}><div className="part-head"><span><Box size={14}/>{part[0].toUpperCase()+part.slice(1)}</span><button className="visibility-button" onClick={()=>patchPart(part,!project.parts[part])} title={project.parts[part]?"Hide part":"Show part"}>{project.parts[part]?<Eye size={15}/>:<EyeOff size={15}/>}</button></div>{project.parts[part]&&<Range label="Scale" value={project.scale[part]} onChange={v=>patchScale(part,v)}/>}</div>)}<button className="reset-parts" onClick={()=>patch({scale:{...defaults.scale},parts:{...defaults.parts}})}><RotateCcw size={13}/> Reset part transforms</button><div className="notice"><Layers3 size={16}/><span><strong>Part-level controls</strong><small>Visibility and proportional scaling are editable. Mesh sculpting and rig transforms are future work.</small></span></div></div>}
+ <div className="inspector-footer"><span className="footer-dot"/> Preview updates live <span className="footer-version">v0.2.0</span></div></aside></div></main>;
 }
