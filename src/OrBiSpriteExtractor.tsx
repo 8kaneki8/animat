@@ -31,8 +31,20 @@ function extractSprites(image: HTMLImageElement): SpritePart[] {
   ctx.drawImage(image, 0, 0);
   const pixels = ctx.getImageData(0, 0, width, height);
   const data = pixels.data, total = width * height;
-  let transparent = false;
-  for (let i = 3; i < data.length; i += 4) { if (data[i] < 245) { transparent = true; break; } }
+  let transparentPixels = 0;
+  for (let i = 3; i < data.length; i += 4) if (data[i] < 18) transparentPixels++;
+  let transparentCornerPixels = 0;
+  const countTransparentCorner = (x0: number, y0: number) => {
+    for (let y = 0; y < 6; y++) for (let x = 0; x < 6; x++) {
+      const i = (Math.min(height - 1, y0 + y) * width + Math.min(width - 1, x0 + x)) * 4;
+      if (data[i + 3] < 18) transparentCornerPixels++;
+    }
+  };
+  countTransparentCorner(0, 0);
+  countTransparentCorner(Math.max(0, width - 6), 0);
+  countTransparentCorner(0, Math.max(0, height - 6));
+  countTransparentCorner(Math.max(0, width - 6), Math.max(0, height - 6));
+  const transparent = transparentCornerPixels >= 6 || transparentPixels > total * 0.03;
 
   const corners: number[][] = [];
   const sample = (x0: number, y0: number) => {
