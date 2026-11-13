@@ -1,7 +1,8 @@
-import { ChangeEvent, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, Environment, OrbitControls, RoundedBox, Sphere } from "@react-three/drei";
-import { Activity, Box, Check, Download, Eye, EyeOff, Layers3, Palette, Play, RotateCcw, Save, Sparkles, Upload, WandSparkles } from "lucide-react";
+import { Activity, Box, Check, Download, Eye, EyeOff, Layers3, Palette, RotateCcw, Save, Sparkles, Upload, WandSparkles } from "lucide-react";
 import type { Group } from "three";
 
 type Expression = "Neutral" | "Happy" | "Curious" | "Sleepy" | "Excited" | "Worried" | "Angry" | "Surprised";
