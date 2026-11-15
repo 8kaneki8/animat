@@ -117,7 +117,7 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
       setDetections(found);
       setSelectedId(found[0].id);
       setAssignment(mapPart(found[0].name));
-      setStatus(`AI detected ${found.length} possible parts. Review each tight box before adding it.`);
+      setStatus(`AI selected one OrBi character and found ${found.length} parts inside that character. Review each box before adding it.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "AI analysis failed.");
     } finally {
@@ -158,7 +158,7 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
 
   return <section className="inspector-content" style={{ borderBottom: "1px solid var(--border, #303044)", paddingBottom: 16, marginBottom: 16 }}>
     <div className="section-label"><span><Bot size={15} style={{ verticalAlign: "middle" }} /> AI part detection</span><span className="muted">Cloudflare Worker</span></div>
-    <div className="notice"><ScanSearch size={16}/><span><strong>Analyze the original OrBi artwork</strong><small>AI suggests body-part locations. You review the boxes and choose which rig layer to add; the original pixels are not redesigned.</small></span></div>
+    <div className="notice"><ScanSearch size={16}/><span><strong>Analyze the original OrBi artwork</strong><small>AI first selects one OrBi in the full scene, then detects parts only inside that character. You review every box before adding a rig layer.</small></span></div>
     <button className="button primary reference-action" disabled={busy || !image} onClick={() => void analyze()}>
       <ScanSearch size={15}/>{busy ? "Analyzing with AI…" : "Analyze OrBi with AI"}
     </button>
@@ -185,6 +185,6 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
         <button className="button primary reference-action" onClick={addSelected}><Check size={15}/> Add this crop to OrBi rig</button>
       </div>}
     </>}
-    <div className="notice"><AlertCircle size={16}/><span><strong>Important limitation</strong><small>AI boxes locate parts, but this first connection crops rectangular areas. A box may include background or neighboring artwork; clean transparent segmentation and hidden-part reconstruction are not included yet.</small></span></div>
+    <div className="notice"><AlertCircle size={16}/><span><strong>Important limitation</strong><small>Detection is restricted to one selected OrBi, not every duplicate in the scene. Adding a part still creates a rectangular crop; transparent segmentation and hidden-part reconstruction are not included yet.</small></span></div>
   </section>;
 }
