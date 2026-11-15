@@ -21,20 +21,37 @@ function normalizeDetections(payload: unknown): Detection[] {
   if (!payload || typeof payload !== "object") throw new Error("The AI server returned an invalid response.");
   const raw = (payload as { parts?: unknown }).parts;
   if (!Array.isArray(raw)) throw new Error("The AI response did not contain a parts array.");
-  return raw.flatMap((item, index) => {
-    if (!item || typeof item !== "object") return [];
+  const accepted: Detection[] = [];
+  const seen = new Set<string>();
+  raw.forEach((item, index) => {
+    if (!item || typeof item !== "object") return;
     const value = item as Record<string, unknown>;
     const coords = value.box ?? value.bbox ?? value.boundingBox;
-    if (!Array.isArray(coords) || coords.length !== 4) return [];
+    if (!Array.isArray(coords) || coords.length !== 4) return;
     let [y1, x1, y2, x2] = coords.map(Number);
-    if (![y1, x1, y2, x2].every(Number.isFinite)) return [];
+    if (![y1, x1, y2, x2].every(Number.isFinite)) return;
     if (Math.max(y1, x1, y2, x2) <= 1) { y1 *= 1000; x1 *= 1000; y2 *= 1000; x2 *= 1000; }
-    if (Math.max(y1, x1, y2, x2) > 1000) return [];
+    if (Math.max(y1, x1, y2, x2) > 1000) return;
     y1 = Math.max(0, Math.min(1000, y1)); x1 = Math.max(0, Math.min(1000, x1));
     y2 = Math.max(0, Math.min(1000, y2)); x2 = Math.max(0, Math.min(1000, x2));
-    if (y2 <= y1 || x2 <= x1) return [];
-    return [{ id: crypto.randomUUID(), name: String(value.name ?? value.part ?? value.label ?? `Part ${index + 1}`), box: [y1, x1, y2, x2] as [number, number, number, number] }];
+    if (y2 <= y1 || x2 <= x1) return;
+    const width = (x2 - x1) / 1000;
+    const height = (y2 - y1) / 1000;
+    // Reject generic whole-canvas boxes: they are not useful rig-part detections.
+    if (width * height > 0.78 || (width > 0.92 && height > 0.92)) return;
+    const key = [y1, x1, y2, x2].map(v => Math.round(v / 5)).join(":");
+    if (seen.has(key)) return;
+    seen.add(key);
+    accepted.push({
+      id: crypto.randomUUID(),
+      name: String(value.name ?? value.part ?? value.label ?? `Part ${index + 1}`),
+      box: [y1, x1, y2, x2],
+    });
   });
+  if (accepted.length === 0) {
+    throw new Error("AI returned boxes that cover almost the whole image or overlap completely. No parts were added. Try Analyze again; the model must return tight boxes around each visible part.");
+  }
+  return accepted;
 }
 
 function mapPart(name: string): PartChoice {
@@ -95,11 +112,10 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
         throw new Error(message || `AI server returned HTTP ${response.status}.`);
       }
       const found = normalizeDetections(payload);
-      if (!found.length) throw new Error("The AI did not detect usable body-part boxes. Check the model response and try again.");
       setDetections(found);
       setSelectedId(found[0].id);
       setAssignment(mapPart(found[0].name));
-      setStatus(`AI detected ${found.length} possible parts. Review each box before adding it.`);
+      setStatus(`AI detected ${found.length} possible parts. Review each tight box before adding it.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "AI analysis failed.");
     } finally {
@@ -149,7 +165,7 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
     {detections.length > 0 && image && <>
       <div className="ai-detection-preview" style={{ position: "relative", width: "100%", marginTop: 12 }}>
         <img src={image.src} alt="Original OrBi with AI detection boxes" style={{ display: "block", width: "100%", height: "auto" }}/>
-        <svg viewBox={`0 0 1000 1000`} preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
+        <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
           {detections.map(item => {
             const [y1, x1, y2, x2] = item.box;
             return <rect key={item.id} x={x1} y={y1} width={x2-x1} height={y2-y1} fill="rgba(104,230,255,.08)" stroke={item.id === selectedId ? "#68e6ff" : "#a78bfa"} strokeWidth="5"/>;
@@ -159,7 +175,7 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
       <div className="section-label"><span>AI suggestions</span><span className="muted">{detections.length} remaining</span></div>
       <div className="sprite-candidate-grid">
         {detections.map(item => <button key={item.id} className={"sprite-candidate " + (selectedId === item.id ? "active" : "")} onClick={() => { setSelectedId(item.id); setAssignment(mapPart(item.name)); }}>
-          <small>{item.name}</small><small>{Math.round(item.box[3]-item.box[1])}% × {Math.round(item.box[2]-item.box[0])}% of image</small>
+          <small>{item.name}</small><small>{((item.box[3]-item.box[1])/10).toFixed(1)}% × {((item.box[2]-item.box[0])/10).toFixed(1)}% of image</small>
         </button>)}
       </div>
       {selected && <div className="sprite-assign">
