@@ -12,6 +12,7 @@ export type RigPartAsset = {
   pivotY: number;
   rotation: number;
   visible: boolean;
+  keyframes?: { frame: number; rotation: number }[];
 };
 export type RigMotion = "Idle" | "Wave" | "Walk" | "Talk" | "Off";
 
@@ -33,13 +34,15 @@ export const RIG_PARTS = PARTS;
  * is the joint, while the motion clips animate the segment around that joint.
  * This is an actual per-layer animation pass (not a single whole-image bob).
  */
-export default function OrBiRig2D({ parts, motion, paused, accessories = [] }: {
+export default function OrBiRig2D({ parts, motion, paused, accessories = [], currentFrame = 0 }: {
   parts: Partial<Record<RigPartName, RigPartAsset>>;
   motion: RigMotion;
   paused: boolean;
+  currentFrame?: number;
   accessories?: { id:string; name:string; image:string; x:number; y:number; scale:number; rotation:number; visible?:boolean }[];
 }) {
   const ordered = PARTS.filter((part) => parts[part.id]?.visible !== false && parts[part.id]?.image);
+  const rotationAt = (part: RigPartAsset) => { const keys = [...(part.keyframes || [])].sort((a,b)=>a.frame-b.frame); if (!keys.length) return part.rotation; const before=[...keys].reverse().find(k=>k.frame<=currentFrame); const after=keys.find(k=>k.frame>=currentFrame); if(!before)return after!.rotation; if(!after)return before.rotation; if(before.frame===after.frame)return before.rotation; const t=(currentFrame-before.frame)/(after.frame-before.frame); return before.rotation+(after.rotation-before.rotation)*t; };
   return (
     <div className={`orbi-rig-stage orbi-motion-${motion.toLowerCase()} ${paused ? "rig-paused" : ""}`} aria-label="OrBi 2D skeletal character rig">
       <style>{`
@@ -80,7 +83,7 @@ export default function OrBiRig2D({ parts, motion, paused, accessories = [] }: {
           top: `${part.y}%`,
           width: `${part.width}%`,
           zIndex: z,
-          transform: `translate(-${part.pivotX}%, -${part.pivotY}%) rotate(${part.rotation}deg)`,
+          transform: `translate(-${part.pivotX}%, -${part.pivotY}%) rotate(${rotationAt(part)}deg)`,
           transformOrigin: `${part.pivotX}% ${part.pivotY}%`,
         };
         return <div key={part.id} className={`orbi-rig-anchor rig-part-${id}`} style={style}><img className="orbi-rig-part" src={part.image} alt={part.name} draggable={false} style={{ transformOrigin: `${part.pivotX}% ${part.pivotY}%` }} /></div>;
