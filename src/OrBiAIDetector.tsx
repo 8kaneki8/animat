@@ -19,7 +19,9 @@ const PIVOTS: Record<PartChoice, [number, number]> = {
 
 function normalizeDetections(payload: unknown): Detection[] {
   if (!payload || typeof payload !== "object") throw new Error("The AI server returned an invalid response.");
-  const raw = (payload as { parts?: unknown }).parts;
+  const response = payload as { parts?: unknown; characterFound?: boolean };
+  if (response.characterFound === false) throw new Error("OrBi was not confidently found in this image. Try a clearer full image where OrBi is visible.");
+  const raw = response.parts;
   if (!Array.isArray(raw)) throw new Error("The AI response did not contain a parts array.");
   const accepted: Detection[] = [];
   const seen = new Set<string>();
@@ -165,10 +167,10 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
     {detections.length > 0 && image && <>
       <div className="ai-detection-preview" style={{ position: "relative", width: "100%", marginTop: 12 }}>
         <img src={image.src} alt="Original OrBi with AI detection boxes" style={{ display: "block", width: "100%", height: "auto" }}/>
-        <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
+        <svg viewBox={`0 0 ${image.naturalWidth} ${image.naturalHeight}`} preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
           {detections.map(item => {
             const [y1, x1, y2, x2] = item.box;
-            return <rect key={item.id} x={x1} y={y1} width={x2-x1} height={y2-y1} fill="rgba(104,230,255,.08)" stroke={item.id === selectedId ? "#68e6ff" : "#a78bfa"} strokeWidth="5"/>;
+            return <rect key={item.id} x={(x1 / 1000) * image.naturalWidth} y={(y1 / 1000) * image.naturalHeight} width={((x2-x1) / 1000) * image.naturalWidth} height={((y2-y1) / 1000) * image.naturalHeight} fill="rgba(104,230,255,.08)" stroke={item.id === selectedId ? "#68e6ff" : "#a78bfa"} strokeWidth={Math.max(2, image.naturalWidth / 300)}/>
           })}
         </svg>
       </div>
