@@ -169,3 +169,10 @@
 .sprite-large-preview img{max-width:100%;max-height:100%;object-fit:contain}
 .sprite-scan-icon{width:25px;height:25px;display:grid;place-items:center;border-radius:8px;background:#8b5cf622;color:#d8b4fe;font-size:21px;flex:none}
 @media(max-width:900px){.sprite-candidate-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* OrBi keyframe timeline */
+.timeline-editor{margin-top:10px;padding:12px;border:1px solid #ffffff16;border-radius:10px;background:#ffffff05}
+.timeline-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.timeline-ruler{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;margin-top:7px;color:#777d93;font-size:8px;text-align:center}
+.timeline-key-summary{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.timeline-key-summary span{padding:5px 7px;border:1px solid #a78bfa33;border-radius:5px;background:#8b5cf610;color:#c9b8ed;font-size:8px}
