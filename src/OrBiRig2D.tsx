@@ -83,7 +83,7 @@ export default function OrBiRig2D({ parts, motion, paused, accessories = [] }: {
           transform: `translate(-${part.pivotX}%, -${part.pivotY}%) rotate(${part.rotation}deg)`,
           transformOrigin: `${part.pivotX}% ${part.pivotY}%`,
         };
-        return <div key={part.id} className={`orbi-rig-anchor rig-part-${id}`} style={style}><img className="orbi-rig-part" src={part.image} alt={part.name} draggable={false} /></div>;
+        return <div key={part.id} className={`orbi-rig-anchor rig-part-${id}`} style={style}><img className="orbi-rig-part" src={part.image} alt={part.name} draggable={false} style={{ transformOrigin: `${part.pivotX}% ${part.pivotY}%` }} /></div>;
       })}
       {accessories.filter((item) => item.visible !== false).map((item) => <img key={item.id} className="orbi-rig-accessory" src={item.image} alt={item.name} style={{left:`${item.x}%`,top:`${item.y}%`,transform:`translate(-50%,-50%) rotate(${item.rotation}deg) scale(${item.scale})`}} />)}
     </div>
