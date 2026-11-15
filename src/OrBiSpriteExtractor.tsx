@@ -1,6 +1,7 @@
 import { Activity, Check, Layers3 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { RigPartAsset, RigPartName } from "./OrBiRig2D";
+import OrBiAIDetector from "./OrBiAIDetector";
 
 type PartChoice = RigPartName | "crown";
 type SpritePart = { id: string; image: string; x: number; y: number; width: number; height: number; area: number };
@@ -189,6 +190,7 @@ export default function OrBiSpriteExtractor({ onCreate }: { onCreate: (part: Par
 
   const selectedPart = parts.find(item => item.id === selected);
   return <div className="inspector-content">
+    <OrBiAIDetector imageUrl={source.url} onCreate={onCreate}/>
     <div className="section-label"><span>Original OrBi sprite sheets</span><span className="muted">{parts.length} pieces found</span></div>
     <div className="notice"><Layers3 size={16}/><span><strong>Extract the real artwork into independent layers</strong><small>Loads the two original PNG files from this repository, detects separate visible pieces, and preserves their pixels. Nothing is redrawn or restyled.</small></span></div>
     <label className="range-control"><span>Source artwork</span><select value={sourceId} onChange={e => setSourceId(e.target.value)}>{SOURCES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
