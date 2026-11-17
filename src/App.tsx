@@ -44,7 +44,11 @@ export default function App(){
  const [panel,setPanel]=useState("Appearance"),[saved,setSaved]=useState(false),[notice,setNotice]=useState("Ready to create"),[isDragging,setIsDragging]=useState(false),[referenceReport,setReferenceReport]=useState("");
  const skinInput=useRef<HTMLInputElement>(null);
  const accessoryInput=useRef<HTMLInputElement>(null);
- const [previewPlaying,setPreviewPlaying]=useState(true);\n const [timelineFrame,setTimelineFrame]=useState(0);\n const [timelinePlaying,setTimelinePlaying]=useState(false);\n useEffect(()=>{if(!timelinePlaying)return;const timer=window.setInterval(()=>setTimelineFrame(frame=>(frame>=60?0:frame+1)),100);return()=>window.clearInterval(timer);},[timelinePlaying]);\n const addRigKeyframe=()=>{setProject(p=>({...p,rigParts:Object.fromEntries(Object.entries(p.rigParts||{}).map(([id,part])=>[id,part?{...part,keyframes:[...(part.keyframes||[]).filter(k=>k.frame!==timelineFrame),{frame:timelineFrame,rotation:part.rotation}]}:part])) as Project["rigParts"]}));setNotice("Keyframe saved at frame "+timelineFrame);};
+ const [previewPlaying,setPreviewPlaying]=useState(true);
+ const [timelineFrame,setTimelineFrame]=useState(0);
+ const [timelinePlaying,setTimelinePlaying]=useState(false);
+ useEffect(()=>{if(!timelinePlaying)return;const timer=window.setInterval(()=>setTimelineFrame(frame=>(frame>=60?0:frame+1)),100);return()=>window.clearInterval(timer);},[timelinePlaying]);
+ const addRigKeyframe=()=>{setProject(p=>({...p,rigParts:Object.fromEntries(Object.entries(p.rigParts||{}).map(([id,part])=>[id,part?{...part,keyframes:[...(part.keyframes||[]).filter(k=>k.frame!==timelineFrame),{frame:timelineFrame,rotation:part.rotation}]}:part])) as Project["rigParts"]}));setNotice("Keyframe saved at frame "+timelineFrame);};
  const activeSkin=project.skins.find(s=>s.id===project.activeSkinId);
  const referenceInput=useRef<HTMLInputElement>(null);
  const patch=(values:Partial<Project>)=>setProject(p=>({...p,...values}));
