@@ -96,8 +96,10 @@ export default {
       const located = await ask(
         "IMAGE 1 is the submitted artwork. IMAGE 2 is the canonical OrBi reference. " +
         "Decide whether IMAGE 1 contains the same OrBi character, allowing different poses, clothing, scale and background. " +
-        "Do not require exact pixel matching. Select the clearest single instance. Return only JSON: " +
-        "{characterFound:boolean, characterBox:[ymin,xmin,ymax,xmax]}. Coordinates are integers 0..1000 normalized to IMAGE 1. " +
+        "Do not require exact pixel matching. Compare silhouette, face layout, proportions and distinctive design details; do not match by color alone. " +
+        "Select the clearest single instance. Return only JSON: " +
+        "{characterFound:boolean, characterBox:[ymin,xmin,ymax,xmax], identityConfidence:number}. " +
+        "Coordinates are integers 0..1000 normalized to IMAGE 1; identityConfidence is 0..1. " +
         "If OrBi is clearly present but parts are hidden or overlapped, still return characterFound=true. " +
         "Return false only when the identity cannot reasonably be matched."
       );
@@ -119,8 +121,13 @@ export default {
         "The verified OrBi region in IMAGE 1 is [ymin=" + cy1 + ", xmin=" + cx1 + ", ymax=" + cy2 + ", xmax=" + cx2 + "] on a 0..1000 scale. " +
         "Inspect ONLY this region. Detect visible, distinct parts of this one OrBi: head, torso, leftArm, rightArm, leftLeg, rightLeg, cape, crown. " +
         "Return JSON {parts:[{name,label,bbox,confidence,notes}]}. bbox coordinates are normalized 0..1000 relative to the selected character region, " +
-        "in [ymin,xmin,ymax,xmax] order. Use exact part names. confidence is 0..1. Never return the whole character as a part. " +
-        "Do not include background, other characters or objects. Do not invent hidden pixels. If boundaries are not separable, return an empty parts array."
+        "in [ymin,xmin,ymax,xmax] order. Use exact part names. confidence is 0..1 and must reflect boundary certainty, not guesswork. " +
+        "Left/right refer to OrBi's own anatomical left and right, not the viewer's. Return at most one suggestion for each part. " +
+        "Fit each box tightly around the visible part; avoid including neighboring parts or empty margins. " +
+        "Never return the whole character as a part. Crown is an accessory; cape is a separate cloth layer. " +
+        "Do not include background, other characters or objects. Do not invent hidden pixels. " +
+        "If a part is occluded, connected to another part, or its boundary is uncertain, explain that briefly in notes or omit it. " +
+        "If boundaries are not separable, return an empty parts array."
       );
       if (!Array.isArray(detected.parts)) throw new Error("The vision model response did not contain a parts array.");
       const allowedParts = new Set(["head", "torso", "leftArm", "rightArm", "leftLeg", "rightLeg", "cape", "crown"]);
@@ -150,7 +157,12 @@ export default {
         characterFound: true,
         characterBox: [cy1,cx1,cy2,cx2],
         parts: accepted,
-        verification: { matched:true, reason: accepted.length ? "OrBi identity matched; review the part suggestions." : "OrBi identity matched, but no independently separable parts were detected." },
+        verification: {
+          matched:true,
+          identityConfidence: located.identityConfidence !== null && located.identityConfidence !== undefined && Number.isFinite(Number(located.identityConfidence)) ? Math.max(0,Math.min(1,Number(located.identityConfidence))) : null,
+          reason: accepted.length ? "OrBi identity matched; review the part suggestions." : "OrBi identity matched, but no independently separable parts were detected.",
+        },
+        analysisVersion: "orbi-vision-2",
         model,
       }, 200, headers);
     } catch (error) {

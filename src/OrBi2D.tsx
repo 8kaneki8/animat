@@ -16,7 +16,7 @@ export default function OrBi2D({expression,motion,skinSrc,skinLabel,accessories=
  const [baseFailed,setBaseFailed]=useState(false);
  const [skinFailed,setSkinFailed]=useState(false);
 
- useEffect(()=>{setBaseCandidate(0);setSkinCandidate(0);setBaseLoaded(false);setBaseFailed(false);setSkinFailed(false);},[]);
+ useEffect(()=>{setBaseCandidate(0);setSkinCandidate(0);setBaseLoaded(false);setBaseFailed(false);setSkinFailed(false);},[skinSrc]);
  useEffect(()=>{if(reactionIndex<0)return;const timer=window.setTimeout(()=>setReactionIndex(-1),1450);return()=>window.clearTimeout(timer);},[reactionIndex]);
 
  const handlePointerMove=(event:ReactPointerEvent<HTMLDivElement>)=>{
@@ -28,13 +28,16 @@ export default function OrBi2D({expression,motion,skinSrc,skinLabel,accessories=
  const reaction=reactions[reactionIndex];
  const currentBase=ORBI_BASE_ART_CANDIDATES[baseCandidate];
  const skinCandidates=skinSrc===ORBI_ARMOR_SKIN?ORBI_ARMOR_SKIN_CANDIDATES:[];
+ // A skin file is a complete OrBi appearance, not a transparent overlay.
+ // Render exactly one artwork image at a time to avoid doubled/misaligned characters.
+ const showSkin=Boolean(skinSrc)&&!skinFailed;
+ const currentArtwork=showSkin?(skinCandidate===0?skinSrc!:(skinCandidates[skinCandidate]||skinSrc!)):currentBase;
 
  return <div className={"orbi2d-scene orbi-real-scene motion-"+movement+(isHovered?" orbi-is-hovered":"")+(reaction?" reaction-"+reaction.id:"")} aria-label="Interactive official OrBi character preview" onPointerEnter={()=>setIsHovered(true)} onPointerLeave={()=>{setIsHovered(false);setPointer({x:0,y:0});}} onPointerMove={handlePointerMove} onClick={triggerReaction} role="button" tabIndex={0} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();triggerReaction();}}}>
   <div className="orbi2d-grid" aria-hidden="true"/><div className="orbi2d-orbit orbit-one" aria-hidden="true"/><div className="orbi2d-orbit orbit-two" aria-hidden="true"/>
   <div className={"orbi-real-stage mood-"+mood}>
    <div className="orbi-art-wrap" style={{transform:"perspective(900px) rotateX("+(-pointer.y*2.2)+"deg) rotateY("+(pointer.x*3.2)+"deg)"}}>
-    <img key={currentBase} className="orbi-real-art orbi-base-art" src={currentBase} alt="Original OrBi base character" draggable={false} loading="eager" decoding="async" onLoad={()=>{setBaseLoaded(true);setBaseFailed(false);}} onError={()=>{if(baseCandidate+1<ORBI_BASE_ART_CANDIDATES.length){setBaseCandidate(v=>v+1);}else{setBaseFailed(true);}}}/>
-    {skinSrc&&!skinFailed&&<img key={skinCandidate+"-"+skinSrc} className="orbi-real-art orbi-skin-art" src={skinCandidate===0?skinSrc:(skinCandidates[skinCandidate]||skinSrc)} alt={"OrBi skin — "+(skinLabel||"Custom outfit")} draggable={false} loading="eager" decoding="async" onError={()=>{if(skinCandidate+1<skinCandidates.length)setSkinCandidate(v=>v+1);else setSkinFailed(true);}}/>}
+    <img key={currentArtwork} className="orbi-real-art orbi-base-art" src={currentArtwork} alt={showSkin?("OrBi skin — "+(skinLabel||"Applied outfit")):"Original OrBi base character"} draggable={false} loading="eager" decoding="async" onLoad={()=>{setBaseLoaded(true);setBaseFailed(false);}} onError={()=>{if(showSkin&&skinCandidates.length&&skinCandidate+1<skinCandidates.length){setSkinCandidate(v=>v+1);}else if(showSkin){setSkinFailed(true);setBaseLoaded(false);}else if(baseCandidate+1<ORBI_BASE_ART_CANDIDATES.length){setBaseCandidate(v=>v+1);}else{setBaseFailed(true);}}}/>
     <div className={"orbi-blink-overlay "+(animated?"blink-active":"")} aria-hidden="true"><span className="orbi-closed-eye eye-left"/><span className="orbi-closed-eye eye-right"/></div>
    </div>
   </div>
@@ -43,6 +46,6 @@ export default function OrBi2D({expression,motion,skinSrc,skinLabel,accessories=
   <div className="orbi-accessory-layer" aria-label="Character accessories">{accessories.filter(item=>item.visible!==false).map(item=><img key={item.id} src={item.image} alt={item.name} title={item.name} draggable={false} style={{left:item.x+"%",top:item.y+"%",transform:"translate(-50%, -50%) rotate("+item.rotation+"deg) scale("+item.scale+")"}}/>)}</div>
   {reaction&&<div className="orbi-reaction-bubble" aria-live="polite"><span>{reaction.symbol}</span>{reaction.text}</div>}
   <div className="orbi-interaction-hint">{isHovered?"CLICK ORBI TO REACT":"MOVE OVER ORBI · CLICK TO INTERACT"}</div>
-  <div className="orbi2d-caption"><span className="orbi2d-live-dot"/> ORBI · CHARACTER ARTWORK</div><div className="orbi-real-note">{skinSrc&&!skinFailed?"Skin: "+(skinLabel||"Applied"):"Base character · no skin"} · {expression} · {motion}</div>
+  <div className="orbi2d-caption"><span className="orbi2d-live-dot"/> ORBI · CHARACTER ARTWORK</div><div className="orbi-real-note">{showSkin?"Skin: "+(skinLabel||"Applied"):"Base character · no skin"} · {expression} · {motion}</div>
  </div>;
 }
