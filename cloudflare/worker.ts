@@ -1,60 +1,45 @@
 interface Env {
-  GEMINI_API_KEY: string;
-  GEMINI_MODEL?: string;
+  OPENROUTER_API_KEY: string;
+  OPENROUTER_MODEL?: string;
   ALLOWED_ORIGIN?: string;
 }
-
 type Box = [number, number, number, number];
-type ModelPart = {
-  name: string;
-  label: string;
-  category: string;
-  bbox: number[];
-  confidence: number;
-  notes: string;
-};
+type Part = { name: string; label?: string; bbox: number[]; confidence?: number; notes?: string };
 
-const corsHeaders = (origin: string, allowed: string) => ({
-  "Access-Control-Allow-Origin": origin === allowed ? origin : allowed,
+const corsHeaders = (allowed: string) => ({
+  "Access-Control-Allow-Origin": allowed,
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
   "Access-Control-Max-Age": "86400",
   "Vary": "Origin",
 });
-
 function json(data: unknown, status: number, headers: Record<string, string>) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...headers, "Content-Type": "application/json; charset=utf-8" },
-  });
+  return new Response(JSON.stringify(data), { status, headers: { ...headers, "Content-Type": "application/json; charset=utf-8" } });
 }
-
+function parseAIJson(content: unknown): Record<string, unknown> {
+  const raw = typeof content === "string" ? content :
+    Array.isArray(content) ? content.map((item) => typeof item === "string" ? item : (item as {text?:string})?.text || "").join("\n") : "";
+  const cleaned = raw.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+  const start = cleaned.indexOf("{"), end = cleaned.lastIndexOf("}");
+  if (start < 0 || end <= start) throw new Error("The vision model did not return a JSON object.");
+  return JSON.parse(cleaned.slice(start, end + 1)) as Record<string, unknown>;
+}
+const clamp = (value: number) => Math.max(0, Math.min(1000, Math.round(value)));
 function validBox(value: unknown): value is Box {
   return Array.isArray(value) && value.length === 4 &&
-    value.every((coordinate) => Number.isInteger(coordinate) && coordinate >= 0 && coordinate <= 1000) &&
+    value.every((item) => Number.isFinite(item) && item >= 0 && item <= 1000) &&
     value[2] > value[0] && value[3] > value[1];
-}
-
-function insideCharacter(part: Box, character: Box, tolerance = 24) {
-  return part[0] >= character[0] - tolerance &&
-    part[1] >= character[1] - tolerance &&
-    part[2] <= character[2] + tolerance &&
-    part[3] <= character[3] + tolerance;
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const allowed = env.ALLOWED_ORIGIN || "https://8kaneki8.github.io";
     const origin = request.headers.get("Origin") || "";
-    const headers = corsHeaders(origin, allowed);
-
-    if (request.method === "OPTIONS") {
-      if (origin && origin !== allowed) return new Response("Origin not allowed", { status: 403 });
-      return new Response(null, { status: 204, headers });
-    }
-    if (origin && origin !== allowed) return json({ error: "Origin not allowed" }, 403, headers);
-    if (request.method !== "POST") return json({ error: "Use POST" }, 405, headers);
-    if (!env.GEMINI_API_KEY) return json({ error: "Gemini API key is not configured on the Worker." }, 503, headers);
+    const headers = corsHeaders(allowed);
+    if (origin && origin !== allowed) return json({ error: "Origin not allowed." }, 403, headers);
+    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
+    if (request.method !== "POST") return json({ error: "Use POST." }, 405, headers);
+    if (!env.OPENROUTER_API_KEY) return json({ error: "OpenRouter API key is not configured on this Worker." }, 503, headers);
 
     try {
       const body = await request.json() as { imageBase64?: string; mimeType?: string };
@@ -62,117 +47,115 @@ export default {
       const mimeType = body.mimeType || "image/png";
       if (!/^image\/(png|jpeg|webp)$/.test(mimeType)) return json({ error: "Use a PNG, JPEG, or WebP image." }, 400, headers);
       if (!imageBase64 || imageBase64.length > 12_000_000 || !/^[A-Za-z0-9+/=]+$/.test(imageBase64)) {
-        return json({ error: "Image data is missing or exceeds the 9 MB limit." }, 400, headers);
+        return json({ error: "Image is missing or exceeds the 9 MB limit." }, 400, headers);
       }
 
-      const prompt = `You are analyzing the supplied image for a 2D character rigging editor. The character is the user's original OrBi artwork.
-Analyze the actual pixels. Do not assume a generic mascot and do not redesign, redraw, recolor, beautify, or invent any pixels.
-STEP 1 — CHARACTER LOCALIZATION: decide whether the recognizable OrBi character is present. If it is present, return one tight characterBbox around the main complete OrBi character, excluding unrelated text, UI, background decorations, and separate duplicate poses. Coordinates use [ymin, xmin, ymax, xmax], integer values 0..1000.
-STEP 2 — PART LOCALIZATION: identify only clearly visible, anatomically distinct parts of that same OrBi character. Every part box MUST lie inside characterBbox (a small 24/1000 tolerance is allowed). Do not include background objects or other characters. Never use the full character box as a part.
-Allowed part names: head, torso, leftArm, rightArm, leftLeg, rightLeg, cape, crown, faceDetails. Use exact names.
-Each part bbox is [ymin, xmin, ymax, xmax], integer coordinates 0..1000, tightly enclosing the visible component. Confidence is visual certainty from 0 to 1. Return only parts with confidence >= 0.45.
-Do not infer hidden or occluded pixels. If the source is a single flat image and part boundaries cannot be separated, say so in notes and return only conservative visible regions; do not pretend the crop is a transparent, segmented limb.
-If OrBi is absent or cannot be identified, set characterFound=false, characterBbox=[0,0,0,0], and parts=[].
-Return JSON only, no markdown.`;
+      const referenceResponse = await fetch("https://raw.githubusercontent.com/8kaneki8/animat/main/2409c563-7712-439b-bb7c-710fce80312c.png", { signal: AbortSignal.timeout(15000) });
+      if (!referenceResponse.ok) throw new Error("Could not load the canonical OrBi reference image.");
+      const referenceBytes = new Uint8Array(await referenceResponse.arrayBuffer());
+      if (referenceBytes.length > 8_000_000) throw new Error("The canonical OrBi reference image is too large.");
+      let binary = "";
+      for (let i = 0; i < referenceBytes.length; i += 0x8000) binary += String.fromCharCode(...referenceBytes.subarray(i, Math.min(i + 0x8000, referenceBytes.length)));
+      const reference = "data:image/png;base64," + btoa(binary);
+      const scene = "data:" + mimeType + ";base64," + imageBase64;
+      const model = env.OPENROUTER_MODEL || "nvidia/nemotron-3.5-super-vl:free";
 
-      const model = env.GEMINI_MODEL || "gemini-2.5-flash";
-      const upstream = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`,
-        {
+      async function ask(prompt: string): Promise<Record<string, unknown>> {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: AbortSignal.timeout(30000),
+          headers: {
+            "Authorization": "Bearer " + env.OPENROUTER_API_KEY,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://8kaneki8.github.io/animat/",
+            "X-Title": "Animat OrBi Studio",
+          },
+          signal: AbortSignal.timeout(45_000),
           body: JSON.stringify({
-            contents: [{
-              role: "user",
-              parts: [
-                { text: prompt },
-                { inline_data: { mime_type: mimeType, data: imageBase64 } },
-              ],
-            }],
-            generationConfig: {
-              temperature: 0.05,
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: "OBJECT",
-                properties: {
-                  characterName: { type: "STRING" },
-                  characterFound: { type: "BOOLEAN" },
-                  characterBbox: { type: "ARRAY", items: { type: "INTEGER" } },
-                  parts: {
-                    type: "ARRAY",
-                    items: {
-                      type: "OBJECT",
-                      properties: {
-                        name: { type: "STRING", enum: ["head", "torso", "leftArm", "rightArm", "leftLeg", "rightLeg", "cape", "crown", "faceDetails"] },
-                        label: { type: "STRING" },
-                        category: { type: "STRING" },
-                        bbox: { type: "ARRAY", items: { type: "INTEGER" } },
-                        confidence: { type: "NUMBER" },
-                        notes: { type: "STRING" },
-                      },
-                      required: ["name", "label", "category", "bbox", "confidence", "notes"],
-                    },
-                  },
-                },
-                required: ["characterName", "characterFound", "characterBbox", "parts"],
-              },
-            },
+            model,
+            messages: [{ role: "user", content: [
+              { type: "text", text: prompt },
+              { type: "image_url", image_url: { url: scene } },
+              { type: "image_url", image_url: { url: reference } },
+            ] }],
+            temperature: 0,
+            max_tokens: 2500,
+            reasoning: { enabled: false },
           }),
-        },
-      );
-
-      const result = await upstream.json() as {
-        error?: { message?: string };
-        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-      };
-      if (!upstream.ok) {
-        return json({ error: result.error?.message || `Gemini request failed (${upstream.status}).` }, 502, headers);
-      }
-      const responseText = result.candidates?.[0]?.content?.parts?.find((part) => part.text)?.text;
-      if (!responseText) return json({ error: "Gemini returned an empty analysis." }, 502, headers);
-
-      const parsed = JSON.parse(responseText) as {
-        characterName?: string;
-        characterFound?: boolean;
-        characterBbox?: number[];
-        parts?: ModelPart[];
-      };
-      if (parsed.characterFound !== true || !validBox(parsed.characterBbox)) {
-        return json({ characterName: parsed.characterName || "OrBi", characterFound: false, characterBbox: null, parts: [] }, 200, headers);
-      }
-
-      const characterBox = parsed.characterBbox;
-      const allowedParts = new Set(["head", "torso", "leftArm", "rightArm", "leftLeg", "rightLeg", "cape", "crown", "faceDetails"]);
-      const accepted: ModelPart[] = [];
-      for (const part of parsed.parts || []) {
-        if (!allowedParts.has(part.name) || !Number.isFinite(part.confidence) || part.confidence < 0.45) continue;
-        if (!validBox(part.bbox) || !insideCharacter(part.bbox, characterBox)) continue;
-        const partArea = (part.bbox[2] - part.bbox[0]) * (part.bbox[3] - part.bbox[1]);
-        const characterArea = (characterBox[2] - characterBox[0]) * (characterBox[3] - characterBox[1]);
-        if (partArea / characterArea > 0.72) continue;
-        const duplicate = accepted.some((existing) => {
-          if (existing.name !== part.name) return false;
-          const a = existing.bbox;
-          const b = part.bbox;
-          const intersection = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) *
-            Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
-          const union = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - intersection;
-          return union > 0 && intersection / union > 0.82;
         });
-        if (!duplicate) accepted.push(part);
+        const data = await response.json() as {
+          error?: { message?: string; code?: number };
+          choices?: Array<{ message?: { content?: unknown }; text?: unknown }>;
+        };
+        if (!response.ok) throw new Error((data.error?.message || "Vision model request failed") + " (HTTP " + response.status + ")");
+        const content = data.choices?.[0]?.message?.content ?? data.choices?.[0]?.text;
+        if (!content) throw new Error("Vision model returned an empty response.");
+        return parseAIJson(content);
       }
-      accepted.sort((a, b) => b.confidence - a.confidence);
+
+      // Pass 1 verifies the original character identity against the canonical OrBi image.
+      const located = await ask(
+        "IMAGE 1 is the submitted artwork. IMAGE 2 is the canonical OrBi reference. " +
+        "Decide whether IMAGE 1 contains the same OrBi character, allowing different poses, clothing, scale and background. " +
+        "Do not require exact pixel matching. Select the clearest single instance. Return only JSON: " +
+        "{characterFound:boolean, characterBox:[ymin,xmin,ymax,xmax]}. Coordinates are integers 0..1000 normalized to IMAGE 1. " +
+        "If OrBi is clearly present but parts are hidden or overlapped, still return characterFound=true. " +
+        "Return false only when the identity cannot reasonably be matched."
+      );
+      if (located.characterFound !== true || !validBox(located.characterBox)) {
+        return json({
+          characterName: "OrBi", characterFound: false, characterBox: null, parts: [],
+          verification: { matched: false, reason: "The submitted image did not produce a confident match to the canonical OrBi reference." },
+          model,
+        }, 200, headers);
+      }
+      const [cy1, cx1, cy2, cx2] = located.characterBox.map(clamp) as Box;
+      if (cy2 - cy1 < 20 || cx2 - cx1 < 20) {
+        return json({ characterName: "OrBi", characterFound: false, characterBox: null, parts: [], verification: { matched: false, reason: "The detected character region was too small to verify." }, model }, 200, headers);
+      }
+
+      // Pass 2 detects only components inside the verified character region.
+      const detected = await ask(
+        "IMAGE 1 is the submitted full scene; IMAGE 2 is the canonical OrBi reference. " +
+        "The verified OrBi region in IMAGE 1 is [ymin=" + cy1 + ", xmin=" + cx1 + ", ymax=" + cy2 + ", xmax=" + cx2 + "] on a 0..1000 scale. " +
+        "Inspect ONLY this region. Detect visible, distinct parts of this one OrBi: head, torso, leftArm, rightArm, leftLeg, rightLeg, cape, crown. " +
+        "Return JSON {parts:[{name,label,bbox,confidence,notes}]}. bbox coordinates are normalized 0..1000 relative to the selected character region, " +
+        "in [ymin,xmin,ymax,xmax] order. Use exact part names. confidence is 0..1. Never return the whole character as a part. " +
+        "Do not include background, other characters or objects. Do not invent hidden pixels. If boundaries are not separable, return an empty parts array."
+      );
+      if (!Array.isArray(detected.parts)) throw new Error("The vision model response did not contain a parts array.");
+      const allowedParts = new Set(["head", "torso", "leftArm", "rightArm", "leftLeg", "rightLeg", "cape", "crown"]);
+      const accepted: Array<{name:string;label:string;bbox:Box;confidence:number;notes:string}> = [];
+      for (const item of detected.parts as Part[]) {
+        if (!item || !allowedParts.has(item.name) || !validBox(item.bbox)) continue;
+        const confidence = Number(item.confidence ?? 0.55);
+        if (!Number.isFinite(confidence) || confidence < 0.35 || confidence > 1) continue;
+        const [y1,x1,y2,x2] = item.bbox;
+        const box: Box = [
+          clamp(cy1 + y1 / 1000 * (cy2 - cy1)),
+          clamp(cx1 + x1 / 1000 * (cx2 - cx1)),
+          clamp(cy1 + y2 / 1000 * (cy2 - cy1)),
+          clamp(cx1 + x2 / 1000 * (cx2 - cx1)),
+        ];
+        if (!validBox(box)) continue;
+        const partArea = (box[2]-box[0])*(box[3]-box[1]);
+        const characterArea = (cy2-cy1)*(cx2-cx1);
+        if (partArea / characterArea > 0.78) continue;
+        const duplicate = accepted.some((old) => old.name === item.name &&
+          Math.abs(old.bbox[0]-box[0]) < 8 && Math.abs(old.bbox[1]-box[1]) < 8);
+        if (!duplicate) accepted.push({ name:item.name, label:String(item.label || item.name), bbox:box, confidence, notes:String(item.notes || "") });
+      }
+      accepted.sort((a,b)=>b.confidence-a.confidence);
       return json({
-        characterName: parsed.characterName || "OrBi",
-        characterFound: accepted.length > 0,
-        characterBbox: characterBox,
+        characterName: "OrBi",
+        characterFound: true,
+        characterBox: [cy1,cx1,cy2,cx2],
         parts: accepted,
+        verification: { matched:true, reason: accepted.length ? "OrBi identity matched; review the part suggestions." : "OrBi identity matched, but no independently separable parts were detected." },
+        model,
       }, 200, headers);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected Worker error.";
-      const status = message.toLowerCase().includes("timeout") ? 504 : 500;
-      return json({ error: message }, status, headers);
+      return json({ error: message }, message.toLowerCase().includes("timeout") ? 504 : 502, headers);
     }
   },
 };
