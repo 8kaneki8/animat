@@ -19,10 +19,14 @@ const PIVOTS: Record<PartChoice, [number, number]> = {
 
 function normalizeDetections(payload: unknown): Detection[] {
   if (!payload || typeof payload !== "object") throw new Error("The AI server returned an invalid response.");
-  const response = payload as { parts?: unknown; characterFound?: boolean; characterName?: string };
-  if (response.characterFound === false) throw new Error("OrBi was not confidently found in this image. Try a clearer full image where OrBi is visible.");
+  const response = payload as { parts?: unknown; characterFound?: boolean; characterName?: string; characterBox?: unknown };
+  if (response.characterFound === false) throw new Error("The AI could not confidently match this image to the original OrBi reference. This is a failed match, not proof that no character is present.");
   const raw = response.parts;
   if (!Array.isArray(raw)) throw new Error("The AI response did not contain a parts array.");
+  if (raw.length === 0) throw new Error("OrBi was found, but the AI could not isolate any separate parts confidently. The character match succeeded; only part detection needs another attempt.");
+  const characterBox = Array.isArray(response.characterBox) && response.characterBox.length === 4
+    ? response.characterBox.map(Number) as [number, number, number, number]
+    : null;
   const accepted: Detection[] = [];
   const seen = new Set<string>();
   raw.forEach((item, index) => {
@@ -39,21 +43,26 @@ function normalizeDetections(payload: unknown): Detection[] {
     if (y2 <= y1 || x2 <= x1) return;
     const width = (x2 - x1) / 1000;
     const height = (y2 - y1) / 1000;
-    // Reject generic whole-canvas boxes: they are not useful rig-part detections.
     if (width * height > 0.78 || (width > 0.92 && height > 0.92)) return;
+    if (characterBox && characterBox.every(Number.isFinite)) {
+      const [cy1,cx1,cy2,cx2] = characterBox;
+      const tolerance = 24;
+      if (y1 < cy1-tolerance || x1 < cx1-tolerance || y2 > cy2+tolerance || x2 > cx2+tolerance) return;
+    }
     const name = String(value.name ?? value.part ?? value.label ?? `Part ${index + 1}`);
     const normalizedName = name.toLowerCase().replace(/[ _-]+/g, "");
     const knownPart = ["head","face","facedetails","torso","body","leftarm","armleft","rightarm","armright","leftleg","legleft","rightleg","legright","cape","cloak","crown","hat"].includes(normalizedName);
-    const confidence = Number(value.confidence ?? 0.5);
-    if (!knownPart || !Number.isFinite(confidence) || confidence < 0.35) return;
+    let confidence = Number(value.confidence ?? value.score ?? 0.5);
+    if (confidence > 1 && confidence <= 100) confidence /= 100;
+    if (!knownPart || !Number.isFinite(confidence) || confidence < 0.35 || confidence > 1) return;
     const key = [y1, x1, y2, x2].map(v => Math.round(v / 5)).join(":");
     if (seen.has(key)) return;
     seen.add(key);
-    accepted.push({ id: crypto.randomUUID(), name, confidence: Math.max(0, Math.min(1, confidence)), box: [y1, x1, y2, x2] });
+    accepted.push({ id: crypto.randomUUID(), name, confidence, box: [y1, x1, y2, x2] });
   });
   accepted.sort((a, b) => b.confidence - a.confidence);
   if (accepted.length === 0) {
-    throw new Error("AI returned boxes that cover almost the whole image or overlap completely. No parts were added. Try Analyze again; the model must return tight boxes around each visible part.");
+    throw new Error("OrBi was matched, but the returned part boxes failed validation. No layers were added. Try again with the full character visible.");
   }
   return accepted;
 }
@@ -120,7 +129,7 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
       setDetections(found);
       setSelectedId(found[0].id);
       setAssignment(mapPart(found[0].name) || "head");
-      setStatus(`AI selected one OrBi character and found ${found.length} parts inside that character. Review each box before adding it.`);
+      setStatus(`OrBi match confirmed. The AI found ${found.length} candidate parts; review each box before adding it.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "AI analysis failed.");
     } finally {
