@@ -273,3 +273,8 @@ body{min-height:100vh;overflow-x:hidden;overflow-y:visible}
 .app-shell[data-theme="light"] input:not([type="color"]):not([type="range"]),.app-shell[data-theme="light"] select{background:#fff;color:#263247;border-color:#d8deea}
 .app-shell[data-theme="light"] .timeline-strip,.app-shell[data-theme="light"] .inspector-head{border-color:#dfe4ee}
 @media(max-width:650px){.theme-switch{font-size:0;width:34px;padding:0;justify-content:center}.theme-switch svg{flex:none}}
+
+/* Accessible loading feedback for AI analysis */
+@keyframes animat-spin{to{transform:rotate(360deg)}}
+.spin{animation:animat-spin .9s linear infinite}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}
