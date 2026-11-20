@@ -165,9 +165,10 @@ Return JSON only, no markdown.`;
       accepted.sort((a, b) => b.confidence - a.confidence);
       return json({
         characterName: parsed.characterName || "OrBi",
-        characterFound: accepted.length > 0,
+        characterFound: true,
         characterBbox: characterBox,
         parts: accepted,
+        verification: { matched: true, reason: accepted.length ? "OrBi identity matched; review the part suggestions." : "OrBi identity matched, but no independently separable parts were detected." },
       }, 200, headers);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected Worker error.";
