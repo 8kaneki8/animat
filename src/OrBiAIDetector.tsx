@@ -5,7 +5,7 @@ import type { RigPartAsset, RigPartName } from "./OrBiRig2D";
 type PartChoice = RigPartName | "crown";
 type Box = [number, number, number, number];
 type Detection = { id: string; name: string; label: string; confidence: number; box: Box; notes: string };
-type Analysis = { detections: Detection[]; characterBox: Box | null; model: string; verificationReason: string };
+type Analysis = { detections: Detection[]; characterBox: Box | null; model: string; analysisVersion: string; identityConfidence: number | null; verificationReason: string };
 
 const WORKER_URL = "https://spring-pine-f61e.mohmedayman7521.workers.dev";
 const PARTS: { id: PartChoice; label: string }[] = [
@@ -72,6 +72,8 @@ function normalizeAnalysis(payload: unknown): Analysis {
     detections: accepted,
     characterBox,
     model: String(response.model || "Vision model"),
+    analysisVersion: String(response.analysisVersion || "legacy"),
+    identityConfidence: Number.isFinite(Number(verification.identityConfidence)) ? Math.max(0,Math.min(1,Number(verification.identityConfidence))) : null,
     verificationReason: String(verification.reason || "Character identity matched."),
   };
 }
@@ -216,6 +218,7 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
         </svg>
       </div>
       <div className="section-label"><span>Verified character & suggestions</span><span className="muted">{detections.length} remaining</span></div>
+      <div className="reference-filename">Identity confidence: {analysis.identityConfidence===null?"not supplied":Math.round(analysis.identityConfidence*100)+"%"} · {analysis.analysisVersion}</div>
       <div className="sprite-candidate-grid">
         {detections.map(item => <button key={item.id} className={"sprite-candidate "+(selectedId===item.id?"active":"")}
           onClick={()=>{setSelectedId(item.id);setAssignment(mapPart(item.name)||"head");}}>
