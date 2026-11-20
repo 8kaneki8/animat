@@ -159,7 +159,7 @@ export default {
         parts: accepted,
         verification: {
           matched:true,
-          identityConfidence: Number.isFinite(Number(located.identityConfidence)) ? Math.max(0,Math.min(1,Number(located.identityConfidence))) : null,
+          identityConfidence: located.identityConfidence !== null && located.identityConfidence !== undefined && Number.isFinite(Number(located.identityConfidence)) ? Math.max(0,Math.min(1,Number(located.identityConfidence))) : null,
           reason: accepted.length ? "OrBi identity matched; review the part suggestions." : "OrBi identity matched, but no independently separable parts were detected.",
         },
         analysisVersion: "orbi-vision-2",
