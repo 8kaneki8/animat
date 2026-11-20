@@ -10,7 +10,7 @@ type Props = {
 };
 
 // Keep the approved original artwork untouched. Facial animation is a separate overlay.
-const BASE_CHARACTER = "https://raw.githubusercontent.com/8kaneki8/animat/a25a6f34942e62fd5e01bd33b2efcb7c2dfd86b9/image.png";
+import { ORBI_BASE_ART } from "./orbiAssets";
 
 export default function OrBi2D({ expression, motion, skinSrc, skinLabel, accessories = [] }: Props) {
   const mood = expression.toLowerCase();
@@ -28,7 +28,7 @@ export default function OrBi2D({ expression, motion, skinSrc, skinLabel, accesso
 
       <div className={`orbi-real-stage mood-${mood}`}>
         <div className="orbi-art-wrap">
-          <img className="orbi-real-art orbi-base-art" src={BASE_CHARACTER} alt="OrBi base character without outfit" draggable={false} />
+          <img className="orbi-real-art orbi-base-art" src={ORBI_BASE_ART} alt="OrBi base character without outfit" draggable={false} />
           {skinSrc && <img className="orbi-real-art orbi-skin-art" src={skinSrc} alt={`OrBi skin — ${skinLabel || "Custom outfit"}`} draggable={false} />}
           <div className={`orbi-blink-overlay ${animated ? "blink-active" : ""}`} aria-hidden="true">
             <span className="orbi-closed-eye eye-left" />
