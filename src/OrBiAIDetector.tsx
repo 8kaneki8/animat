@@ -42,7 +42,7 @@ function normalizeAnalysis(payload: unknown): Analysis {
 
   const accepted: Detection[] = [];
   const seen = new Set<string>();
-  response.parts.forEach((entry, index) => {
+  response.parts.forEach((entry) => {
     if (!entry || typeof entry !== "object") return;
     const item = entry as Record<string, unknown>;
     const name = String(item.name ?? item.part ?? item.label ?? "");
