@@ -140,7 +140,7 @@ export default function App(){
    const ctx=canvas.getContext("2d");if(!ctx)throw new Error("Canvas unavailable");ctx.drawImage(img,0,0,canvas.width,canvas.height);
    const data=canvas.toDataURL("image/png");if(data.length>2500000){setNotice("Body-part image is too large for this project");return;}
    const layout:Record<RigPartName,{x:number;y:number;width:number;pivotX:number;pivotY:number}>={cape:{x:50,y:48,width:64,pivotX:50,pivotY:12},leftLeg:{x:43,y:77,width:25,pivotX:50,pivotY:8},rightLeg:{x:57,y:77,width:25,pivotX:50,pivotY:8},torso:{x:50,y:55,width:43,pivotX:50,pivotY:45},leftArm:{x:34,y:49,width:26,pivotX:82,pivotY:15},rightArm:{x:66,y:49,width:26,pivotX:18,pivotY:15},head:{x:50,y:25,width:45,pivotX:50,pivotY:78}};
-   const pos=layout[part];const asset:RigPartAsset={id:crypto.randomUUID(),name:file.name.replace(/\\.[^.]+$/,""),image:data,...pos,rotation:0,visible:true};
+   const pos=layout[part];const asset:RigPartAsset={id:crypto.randomUUID(),name:file.name.replace(/\.[^.]+$/,""),image:data,...pos,rotation:0,visible:true};
    setProject(p=>({...p,rigParts:{...p.rigParts,[part]:asset},mode:"OrBi 2D"}));setPanel("Rigging");setNotice(RIG_PARTS.find(x=>x.id===part)?.label+" rig part added");
   }catch{setNotice("Could not import this body part");}
  };
