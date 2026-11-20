@@ -3,7 +3,7 @@ import { Bot, Check, ScanSearch, AlertCircle } from "lucide-react";
 import type { RigPartAsset, RigPartName } from "./OrBiRig2D";
 
 type PartChoice = RigPartName | "crown";
-type Detection = { id: string; name: string; box: [number, number, number, number] };
+type Detection = { id: string; name: string; confidence: number; box: [number, number, number, number] };
 
 const WORKER_URL = "https://spring-pine-f61e.mohmedayman7521.workers.dev";
 const PARTS: { id: PartChoice; label: string }[] = [
@@ -19,7 +19,7 @@ const PIVOTS: Record<PartChoice, [number, number]> = {
 
 function normalizeDetections(payload: unknown): Detection[] {
   if (!payload || typeof payload !== "object") throw new Error("The AI server returned an invalid response.");
-  const response = payload as { parts?: unknown; characterFound?: boolean };
+  const response = payload as { parts?: unknown; characterFound?: boolean; characterName?: string };
   if (response.characterFound === false) throw new Error("OrBi was not confidently found in this image. Try a clearer full image where OrBi is visible.");
   const raw = response.parts;
   if (!Array.isArray(raw)) throw new Error("The AI response did not contain a parts array.");
@@ -41,22 +41,24 @@ function normalizeDetections(payload: unknown): Detection[] {
     const height = (y2 - y1) / 1000;
     // Reject generic whole-canvas boxes: they are not useful rig-part detections.
     if (width * height > 0.78 || (width > 0.92 && height > 0.92)) return;
+    const name = String(value.name ?? value.part ?? value.label ?? `Part ${index + 1}`);
+    const normalizedName = name.toLowerCase().replace(/[ _-]+/g, "");
+    const knownPart = ["head","face","facedetails","torso","body","leftarm","armleft","rightarm","armright","leftleg","legleft","rightleg","legright","cape","cloak","crown","hat"].includes(normalizedName);
+    const confidence = Number(value.confidence ?? 0.5);
+    if (!knownPart || !Number.isFinite(confidence) || confidence < 0.35) return;
     const key = [y1, x1, y2, x2].map(v => Math.round(v / 5)).join(":");
     if (seen.has(key)) return;
     seen.add(key);
-    accepted.push({
-      id: crypto.randomUUID(),
-      name: String(value.name ?? value.part ?? value.label ?? `Part ${index + 1}`),
-      box: [y1, x1, y2, x2],
-    });
+    accepted.push({ id: crypto.randomUUID(), name, confidence: Math.max(0, Math.min(1, confidence)), box: [y1, x1, y2, x2] });
   });
+  accepted.sort((a, b) => b.confidence - a.confidence);
   if (accepted.length === 0) {
     throw new Error("AI returned boxes that cover almost the whole image or overlap completely. No parts were added. Try Analyze again; the model must return tight boxes around each visible part.");
   }
   return accepted;
 }
 
-function mapPart(name: string): PartChoice {
+function mapPart(name: string): PartChoice | null {
   const value = name.toLowerCase().replace(/[ _-]+/g, "");
   if (value.includes("crown") || value.includes("hat")) return "crown";
   if (value.includes("cape") || value.includes("cloak")) return "cape";
@@ -65,7 +67,8 @@ function mapPart(name: string): PartChoice {
   if (value.includes("leftleg") || value.includes("legleft")) return "leftLeg";
   if (value.includes("rightleg") || value.includes("legright")) return "rightLeg";
   if (value.includes("torso") || value.includes("body")) return "torso";
-  return "head";
+  if (value.includes("head") || value.includes("face")) return "head";
+  return null;
 }
 
 export default function OrBiAIDetector({ imageUrl, onCreate }: {
@@ -116,7 +119,7 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
       const found = normalizeDetections(payload);
       setDetections(found);
       setSelectedId(found[0].id);
-      setAssignment(mapPart(found[0].name));
+      setAssignment(mapPart(found[0].name) || "head");
       setStatus(`AI selected one OrBi character and found ${found.length} parts inside that character. Review each box before adding it.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "AI analysis failed.");
@@ -176,8 +179,8 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
       </div>
       <div className="section-label"><span>AI suggestions</span><span className="muted">{detections.length} remaining</span></div>
       <div className="sprite-candidate-grid">
-        {detections.map(item => <button key={item.id} className={"sprite-candidate " + (selectedId === item.id ? "active" : "")} onClick={() => { setSelectedId(item.id); setAssignment(mapPart(item.name)); }}>
-          <small>{item.name}</small><small>{((item.box[3]-item.box[1])/10).toFixed(1)}% × {((item.box[2]-item.box[0])/10).toFixed(1)}% of image</small>
+        {detections.map(item => <button key={item.id} className={"sprite-candidate " + (selectedId === item.id ? "active" : "")} onClick={() => { setSelectedId(item.id); setAssignment(mapPart(item.name) || "head"); }}>
+          <small>{item.name}</small><small>{Math.round(item.confidence * 100)}% confidence</small><small>{((item.box[3]-item.box[1])/10).toFixed(1)}% × {((item.box[2]-item.box[0])/10).toFixed(1)}% of image</small>
         </button>)}
       </div>
       {selected && <div className="sprite-assign">
@@ -185,6 +188,6 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
         <button className="button primary reference-action" onClick={addSelected}><Check size={15}/> Add this crop to OrBi rig</button>
       </div>}
     </>}
-    <div className="notice"><AlertCircle size={16}/><span><strong>Important limitation</strong><small>Detection is restricted to one selected OrBi, not every duplicate in the scene. Adding a part still creates a rectangular crop; transparent segmentation and hidden-part reconstruction are not included yet.</small></span></div>
+    <div className="notice"><AlertCircle size={16}/><span><strong>AI accuracy & review</strong><small>Suggestions are sorted by confidence and low-confidence or unknown labels are filtered out. You must review each box. The current output is a rectangular crop, not pixel-perfect segmentation, and it cannot reconstruct hidden pixels.</small></span></div>
   </section>;
 }

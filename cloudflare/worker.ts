@@ -4,6 +4,16 @@ interface Env {
   ALLOWED_ORIGIN?: string;
 }
 
+type Box = [number, number, number, number];
+type ModelPart = {
+  name: string;
+  label: string;
+  category: string;
+  bbox: number[];
+  confidence: number;
+  notes: string;
+};
+
 const corsHeaders = (origin: string, allowed: string) => ({
   "Access-Control-Allow-Origin": origin === allowed ? origin : allowed,
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -17,6 +27,19 @@ function json(data: unknown, status: number, headers: Record<string, string>) {
     status,
     headers: { ...headers, "Content-Type": "application/json; charset=utf-8" },
   });
+}
+
+function validBox(value: unknown): value is Box {
+  return Array.isArray(value) && value.length === 4 &&
+    value.every((coordinate) => Number.isInteger(coordinate) && coordinate >= 0 && coordinate <= 1000) &&
+    value[2] > value[0] && value[3] > value[1];
+}
+
+function insideCharacter(part: Box, character: Box, tolerance = 24) {
+  return part[0] >= character[0] - tolerance &&
+    part[1] >= character[1] - tolerance &&
+    part[2] <= character[2] + tolerance &&
+    part[3] <= character[3] + tolerance;
 }
 
 export default {
@@ -42,18 +65,15 @@ export default {
         return json({ error: "Image data is missing or exceeds the 9 MB limit." }, 400, headers);
       }
 
-      const prompt = `Analyze this exact 2D character artwork sheet for a character-rigging editor.
-Identify only visible character components that can be localized as separate rectangular regions.
-Do not redesign, redraw, recolor, beautify, or invent any part. Preserve the original character identity.
-Return a JSON object with:
-- characterName: short neutral label
-- parts: array of objects with name, label, category, bbox, confidence, notes.
-Allowed name values: head, torso, leftArm, rightArm, leftLeg, rightLeg, cape, crown, faceDetails, other.
-bbox must be [ymin, xmin, ymax, xmax] in integer coordinates normalized from 0 to 1000, tightly enclosing the visible component.
-Only include components that are clearly visible. Do not claim hidden/occluded pixels are recoverable.
-For a sprite sheet containing multiple poses or separated assets, identify the most complete main character first and label other clearly separate assets as other.
-Confidence is 0..1. If uncertain, lower confidence and explain briefly.
-Return no markdown and no commentary.`;
+      const prompt = `You are analyzing the supplied image for a 2D character rigging editor. The character is the user's original OrBi artwork.
+Analyze the actual pixels. Do not assume a generic mascot and do not redesign, redraw, recolor, beautify, or invent any pixels.
+STEP 1 — CHARACTER LOCALIZATION: decide whether the recognizable OrBi character is present. If it is present, return one tight characterBbox around the main complete OrBi character, excluding unrelated text, UI, background decorations, and separate duplicate poses. Coordinates use [ymin, xmin, ymax, xmax], integer values 0..1000.
+STEP 2 — PART LOCALIZATION: identify only clearly visible, anatomically distinct parts of that same OrBi character. Every part box MUST lie inside characterBbox (a small 24/1000 tolerance is allowed). Do not include background objects or other characters. Never use the full character box as a part.
+Allowed part names: head, torso, leftArm, rightArm, leftLeg, rightLeg, cape, crown, faceDetails. Use exact names.
+Each part bbox is [ymin, xmin, ymax, xmax], integer coordinates 0..1000, tightly enclosing the visible component. Confidence is visual certainty from 0 to 1. Return only parts with confidence >= 0.45.
+Do not infer hidden or occluded pixels. If the source is a single flat image and part boundaries cannot be separated, say so in notes and return only conservative visible regions; do not pretend the crop is a transparent, segmented limb.
+If OrBi is absent or cannot be identified, set characterFound=false, characterBbox=[0,0,0,0], and parts=[].
+Return JSON only, no markdown.`;
 
       const model = env.GEMINI_MODEL || "gemini-2.5-flash";
       const upstream = await fetch(
@@ -61,6 +81,7 @@ Return no markdown and no commentary.`;
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: AbortSignal.timeout(30000),
           body: JSON.stringify({
             contents: [{
               role: "user",
@@ -70,18 +91,20 @@ Return no markdown and no commentary.`;
               ],
             }],
             generationConfig: {
-              temperature: 0.1,
+              temperature: 0.05,
               responseMimeType: "application/json",
               responseSchema: {
                 type: "OBJECT",
                 properties: {
                   characterName: { type: "STRING" },
+                  characterFound: { type: "BOOLEAN" },
+                  characterBbox: { type: "ARRAY", items: { type: "INTEGER" } },
                   parts: {
                     type: "ARRAY",
                     items: {
                       type: "OBJECT",
                       properties: {
-                        name: { type: "STRING", enum: ["head", "torso", "leftArm", "rightArm", "leftLeg", "rightLeg", "cape", "crown", "faceDetails", "other"] },
+                        name: { type: "STRING", enum: ["head", "torso", "leftArm", "rightArm", "leftLeg", "rightLeg", "cape", "crown", "faceDetails"] },
                         label: { type: "STRING" },
                         category: { type: "STRING" },
                         bbox: { type: "ARRAY", items: { type: "INTEGER" } },
@@ -92,7 +115,7 @@ Return no markdown and no commentary.`;
                     },
                   },
                 },
-                required: ["characterName", "parts"],
+                required: ["characterName", "characterFound", "characterBbox", "parts"],
               },
             },
           }),
@@ -106,18 +129,50 @@ Return no markdown and no commentary.`;
       if (!upstream.ok) {
         return json({ error: result.error?.message || `Gemini request failed (${upstream.status}).` }, 502, headers);
       }
-      const text = result.candidates?.[0]?.content?.parts?.find(part => part.text)?.text;
-      if (!text) return json({ error: "Gemini returned an empty analysis." }, 502, headers);
-      const parsed = JSON.parse(text) as { characterName?: string; parts?: Array<{ name: string; label: string; category: string; bbox: number[]; confidence: number; notes: string }> };
-      const parts = (parsed.parts || []).filter(part =>
-        Array.isArray(part.bbox) && part.bbox.length === 4 &&
-        part.bbox.every(value => Number.isFinite(value) && value >= 0 && value <= 1000) &&
-        part.bbox[2] > part.bbox[0] && part.bbox[3] > part.bbox[1]
-      );
-      return json({ characterName: parsed.characterName || "OrBi", parts }, 200, headers);
+      const responseText = result.candidates?.[0]?.content?.parts?.find((part) => part.text)?.text;
+      if (!responseText) return json({ error: "Gemini returned an empty analysis." }, 502, headers);
+
+      const parsed = JSON.parse(responseText) as {
+        characterName?: string;
+        characterFound?: boolean;
+        characterBbox?: number[];
+        parts?: ModelPart[];
+      };
+      if (parsed.characterFound !== true || !validBox(parsed.characterBbox)) {
+        return json({ characterName: parsed.characterName || "OrBi", characterFound: false, characterBbox: null, parts: [] }, 200, headers);
+      }
+
+      const characterBox = parsed.characterBbox;
+      const allowedParts = new Set(["head", "torso", "leftArm", "rightArm", "leftLeg", "rightLeg", "cape", "crown", "faceDetails"]);
+      const accepted: ModelPart[] = [];
+      for (const part of parsed.parts || []) {
+        if (!allowedParts.has(part.name) || !Number.isFinite(part.confidence) || part.confidence < 0.45) continue;
+        if (!validBox(part.bbox) || !insideCharacter(part.bbox, characterBox)) continue;
+        const partArea = (part.bbox[2] - part.bbox[0]) * (part.bbox[3] - part.bbox[1]);
+        const characterArea = (characterBox[2] - characterBox[0]) * (characterBox[3] - characterBox[1]);
+        if (partArea / characterArea > 0.72) continue;
+        const duplicate = accepted.some((existing) => {
+          if (existing.name !== part.name) return false;
+          const a = existing.bbox;
+          const b = part.bbox;
+          const intersection = Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) *
+            Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
+          const union = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - intersection;
+          return union > 0 && intersection / union > 0.82;
+        });
+        if (!duplicate) accepted.push(part);
+      }
+      accepted.sort((a, b) => b.confidence - a.confidence);
+      return json({
+        characterName: parsed.characterName || "OrBi",
+        characterFound: accepted.length > 0,
+        characterBbox: characterBox,
+        parts: accepted,
+      }, 200, headers);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected Worker error.";
-      return json({ error: message }, 500, headers);
+      const status = message.toLowerCase().includes("timeout") ? 504 : 500;
+      return json({ error: message }, status, headers);
     }
   },
 };
