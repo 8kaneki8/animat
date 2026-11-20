@@ -5,6 +5,7 @@ import { ContactShadows, Environment, OrbitControls, RoundedBox, Sphere } from "
 import { Activity, Box, Check, Download, Eye, EyeOff, ImagePlus, Layers3, Palette, RotateCcw, Save, ScanSearch, Sparkles, Upload, WandSparkles, X, Plus, Trash2, Smile, Play } from "lucide-react";
 import type { Group } from "three";
 import OrBi2D from "./OrBi2D";
+import { ORBI_OFFICIAL_SKINS } from "./orbiAssets";
 import OrBiRig2D, { RIG_PARTS } from "./OrBiRig2D";
 import OrBiSpriteExtractor from "./OrBiSpriteExtractor";
 import type { RigPartAsset, RigPartName } from "./OrBiRig2D";
@@ -17,7 +18,7 @@ type SkinAsset = { id:string; name:string; image:string; filename:string };
 type EmotePreset = { id:string; name:string; expression:Expression; motion:Motion };
 type AccessoryAsset = { id:string; name:string; image:string; x:number; y:number; scale:number; rotation:number; visible?:boolean };
 type Project = { rigParts:Partial<Record<RigPartName,RigPartAsset>>; name:string; mode:Mode; body:string; accent:string; eyes:string; expression:Expression; motion:Motion; material:string; parts:Record<Part,boolean>; scale:Record<Part,number>; referenceImage?:string; referenceName?:string; skins:SkinAsset[]; activeSkinId?:string; emotes:EmotePreset[]; accessories:AccessoryAsset[] };
-const defaults:Project={rigParts:{},name:"Untitled character",mode:"OrBi Creator",body:"#8B5CF6",accent:"#E5B8FF",eyes:"#76E8FF",expression:"Neutral",motion:"Idle",material:"Glossy",parts:{head:true,body:true,arms:true,legs:true,antenna:true},scale:{head:1,body:1,arms:1,legs:1,antenna:1},skins:[],emotes:[],accessories:[]};
+const defaults:Project={rigParts:{},name:"Untitled character",mode:"OrBi 2D",body:"#8B5CF6",accent:"#E5B8FF",eyes:"#76E8FF",expression:"Neutral",motion:"Idle",material:"Glossy",parts:{head:true,body:true,arms:true,legs:true,antenna:true},scale:{head:1,body:1,arms:1,legs:1,antenna:1},skins:[...ORBI_OFFICIAL_SKINS],activeSkinId:ORBI_OFFICIAL_SKINS[0].id,emotes:[],accessories:[]};
 const expressions:Expression[]=["Neutral","Happy","Curious","Sleepy","Excited","Worried","Angry","Surprised"];
 const partNames:Part[]=["head","body","arms","legs","antenna"];
 
@@ -40,7 +41,7 @@ function ColorControl({label,value,onChange}:{label:string;value:string;onChange
 function Range({label,value,min=.5,max=1.7,onChange}:{label:string;value:number;min?:number;max?:number;onChange:(v:number)=>void}){return <label className="range-control"><span>{label}<b>{value.toFixed(2)}×</b></span><input type="range" min={min} max={max} step=".05" value={value} onChange={e=>onChange(Number(e.target.value))}/></label>}
 
 export default function App(){
- const [project,setProject]=useState<Project>(()=>{try{return {...defaults,...JSON.parse(localStorage.getItem("animat-project-v1")||"{}")};}catch{return defaults;}});
+ const [project,setProject]=useState<Project>(()=>{try{const saved=JSON.parse(localStorage.getItem("animat-project-v1")||"{}");const merged={...defaults,...saved};if(!Array.isArray(saved.skins)||saved.skins.length===0){merged.skins=[...ORBI_OFFICIAL_SKINS];merged.activeSkinId=ORBI_OFFICIAL_SKINS[0].id;}return merged;}catch{return defaults;}});
  const [panel,setPanel]=useState("Appearance"),[saved,setSaved]=useState(false),[notice,setNotice]=useState("Ready to create"),[isDragging,setIsDragging]=useState(false),[referenceReport,setReferenceReport]=useState("");
  const skinInput=useRef<HTMLInputElement>(null);
  const accessoryInput=useRef<HTMLInputElement>(null);
