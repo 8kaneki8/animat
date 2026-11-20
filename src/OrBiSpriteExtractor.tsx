@@ -2,13 +2,14 @@ import { Activity, Check, Layers3 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { RigPartAsset, RigPartName } from "./OrBiRig2D";
 import OrBiAIDetector from "./OrBiAIDetector";
+import { ORBI_BASE_ART, ORBI_ARMOR_SKIN } from "./orbiAssets";
 
 type PartChoice = RigPartName | "crown";
 type SpritePart = { id: string; image: string; x: number; y: number; width: number; height: number; area: number };
 
 const SOURCES = [
-  { id: "dark", label: "Original dark suit", url: "https://raw.githubusercontent.com/8kaneki8/animat/main/2409c563-7712-439b-bb7c-710fce80312c.png" },
-  { id: "armor", label: "White & purple armor skin", url: "https://raw.githubusercontent.com/8kaneki8/animat/main/f1511c5a-e4a1-4d29-9822-e1d9a673e344.png" },
+  { id: "dark", label: "Original OrBi base artwork", url: ORBI_BASE_ART },
+  { id: "armor", label: "Official armor skin artwork", url: ORBI_ARMOR_SKIN },
 ];
 
 const CHOICES: { id: PartChoice; label: string }[] = [
