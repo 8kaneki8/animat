@@ -43,13 +43,16 @@ export default {
       }
 
       const prompt = `Analyze this exact 2D character artwork sheet for a character-rigging editor.
-Identify only visible character components that can be localized as separate rectangular regions.
-Do not redesign, redraw, recolor, beautify, or invent any part. Preserve the original character identity.
+First determine whether the image contains the recognizable OrBi character. Analyze the actual pixels, not assumptions about a generic mascot.
+Identify only clearly visible, anatomically distinct OrBi components that can be localized as separate rectangular regions. Ignore background decorations, text, shadows, duplicate poses, and unrelated objects.
+Do not redesign, redraw, recolor, beautify, infer missing limbs, or invent any part. Preserve the original character identity. If the artwork is a single flat image and boundaries between parts are not visually separable, return only the parts that can be confidently isolated; do not fabricate boxes.
 Return a JSON object with:
 - characterName: short neutral label
+- characterFound: boolean
 - parts: array of objects with name, label, category, bbox, confidence, notes.
 Allowed name values: head, torso, leftArm, rightArm, leftLeg, rightLeg, cape, crown, faceDetails, other.
-bbox must be [ymin, xmin, ymax, xmax] in integer coordinates normalized from 0 to 1000, tightly enclosing the visible component.
+bbox must be [ymin, xmin, ymax, xmax] in integer coordinates normalized from 0 to 1000, tightly enclosing only the visible component. Coordinates must be within 0..1000 and ymin < ymax, xmin < xmax.
+Use exact part names from the allowed list. Keep each box tight; never return one box for the entire character as a body part. confidence must reflect visual certainty from 0 to 1. Omit parts with confidence below 0.4.
 Only include components that are clearly visible. Do not claim hidden/occluded pixels are recoverable.
 For a sprite sheet containing multiple poses or separated assets, identify the most complete main character first and label other clearly separate assets as other.
 Confidence is 0..1. If uncertain, lower confidence and explain briefly.
@@ -76,6 +79,7 @@ Return no markdown and no commentary.`;
                 type: "OBJECT",
                 properties: {
                   characterName: { type: "STRING" },
+                  characterFound: { type: "BOOLEAN" },
                   parts: {
                     type: "ARRAY",
                     items: {
@@ -92,7 +96,7 @@ Return no markdown and no commentary.`;
                     },
                   },
                 },
-                required: ["characterName", "parts"],
+                required: ["characterName", "characterFound", "parts"],
               },
             },
           }),
@@ -109,12 +113,16 @@ Return no markdown and no commentary.`;
       const text = result.candidates?.[0]?.content?.parts?.find(part => part.text)?.text;
       if (!text) return json({ error: "Gemini returned an empty analysis." }, 502, headers);
       const parsed = JSON.parse(text) as { characterName?: string; parts?: Array<{ name: string; label: string; category: string; bbox: number[]; confidence: number; notes: string }> };
+      const allowedParts = new Set(["head", "torso", "leftArm", "rightArm", "leftLeg", "rightLeg", "cape", "crown", "faceDetails"]);
       const parts = (parsed.parts || []).filter(part =>
+        allowedParts.has(part.name) && Number.isFinite(part.confidence) && part.confidence >= 0.4 &&
         Array.isArray(part.bbox) && part.bbox.length === 4 &&
         part.bbox.every(value => Number.isFinite(value) && value >= 0 && value <= 1000) &&
-        part.bbox[2] > part.bbox[0] && part.bbox[3] > part.bbox[1]
-      );
-      return json({ characterName: parsed.characterName || "OrBi", parts }, 200, headers);
+        part.bbox[2] > part.bbox[0] && part.bbox[3] > part.bbox[1] &&
+        ((part.bbox[2] - part.bbox[0]) * (part.bbox[3] - part.bbox[1])) < 780000
+      ).sort((a, b) => b.confidence - a.confidence);
+      const characterFound = parsed.characterFound === true && parts.length > 0;
+      return json({ characterName: parsed.characterName || "OrBi", characterFound, parts }, 200, headers);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected Worker error.";
       return json({ error: message }, 500, headers);
