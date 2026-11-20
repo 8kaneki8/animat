@@ -28,6 +28,69 @@ function readBox(value: unknown): Box | null {
   return [Math.round(y1), Math.round(x1), Math.round(y2), Math.round(x2)];
 }
 
+function makeTransparentCrop(image: HTMLImageElement, left: number, top: number, width: number, height: number): { data: string; method: string } {
+  const canvas = document.createElement("canvas");
+  canvas.width = width; canvas.height = height;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("Could not create the crop canvas.");
+  context.drawImage(image, left, top, width, height, 0, 0, width, height);
+  const pixels = context.getImageData(0, 0, width, height);
+  const data = pixels.data;
+  const total = width * height;
+  let transparent = 0;
+  for (let i = 3; i < data.length; i += 4) if (data[i] < 245) transparent++;
+  if (transparent > total * 0.005) {
+    return { data: canvas.toDataURL("image/png"), method: "Original alpha preserved" };
+  }
+
+  // Conservative edge-connected background removal for flat, opaque source images.
+  const step = Math.max(1, Math.floor(Math.min(width, height) / 120));
+  const bins = new Map<string, { count: number; r: number; g: number; b: number }>();
+  const sample = (x: number, y: number) => {
+    const i = (y * width + x) * 4;
+    if (data[i + 3] < 245) return;
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    const key = [r, g, b].map(v => Math.round(v / 24)).join(":");
+    const entry = bins.get(key) || { count: 0, r: 0, g: 0, b: 0 };
+    entry.count++; entry.r += r; entry.g += g; entry.b += b; bins.set(key, entry);
+  };
+  for (let x = 0; x < width; x += step) { sample(x, 0); sample(x, height - 1); }
+  for (let y = 0; y < height; y += step) { sample(0, y); sample(width - 1, y); }
+  const perimeter = [...bins.values()].reduce((sum, entry) => sum + entry.count, 0);
+  const dominant = [...bins.values()].sort((a, b) => b.count - a.count)[0];
+  if (!dominant || !perimeter || dominant.count / perimeter < 0.42) {
+    throw new Error("This crop has no clear, uniform edge background. Use a transparent source or clean the cutout manually; no layer was added.");
+  }
+  const bg = [dominant.r / dominant.count, dominant.g / dominant.count, dominant.b / dominant.count];
+  const visited = new Uint8Array(total);
+  const queue = new Int32Array(total);
+  let read = 0, write = 0;
+  const push = (index: number) => {
+    if (index < 0 || index >= total || visited[index]) return;
+    const i = index * 4;
+    const distance = Math.hypot(data[i] - bg[0], data[i + 1] - bg[1], data[i + 2] - bg[2]);
+    if (data[i + 3] > 0 && distance <= 52) {
+      visited[index] = 1; queue[write++] = index;
+    }
+  };
+  for (let x = 0; x < width; x++) { push(x); push((height - 1) * width + x); }
+  for (let y = 1; y < height - 1; y++) { push(y * width); push(y * width + width - 1); }
+  while (read < write) {
+    const index = queue[read++], x = index % width, y = Math.floor(index / width);
+    if (x > 0) push(index - 1);
+    if (x + 1 < width) push(index + 1);
+    if (y > 0) push(index - width);
+    if (y + 1 < height) push(index + width);
+  }
+  const removedRatio = write / total;
+  if (removedRatio < 0.015 || removedRatio > 0.82) {
+    throw new Error("The background could not be separated safely from this crop. Use a transparent source or clean the cutout manually; no layer was added.");
+  }
+  for (let index = 0; index < total; index++) if (visited[index]) data[index * 4 + 3] = 0;
+  context.putImageData(pixels, 0, 0);
+  return { data: canvas.toDataURL("image/png"), method: "Edge-connected background cleanup" };
+}
+
 function normalizeAnalysis(payload: unknown): Analysis {
   if (!payload || typeof payload !== "object") throw new Error("The AI server returned an invalid response.");
   const response = payload as Record<string, unknown>;
@@ -166,26 +229,30 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
     const right = Math.min(image.naturalWidth, Math.ceil((x2/1000)*image.naturalWidth));
     const bottom = Math.min(image.naturalHeight, Math.ceil((y2/1000)*image.naturalHeight));
     const width = Math.max(1,right-left), height = Math.max(1,bottom-top);
-    const canvas = document.createElement("canvas");
-    canvas.width = width; canvas.height = height;
-    const context = canvas.getContext("2d");
-    if (!context) { setError("Could not create the image crop."); return; }
-    context.drawImage(image,left,top,width,height,0,0,width,height);
-    const data = canvas.toDataURL("image/png");
-    if (data.length > 3_500_000) { setError("This crop is too large for the project. Use a smaller source image."); return; }
+    let crop: { data: string; method: string };
+    try {
+      crop = makeTransparentCrop(image,left,top,width,height);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not clean the crop background.");
+      return;
+    }
+    if (crop.data.length > 3_500_000) { setError("This crop is too large for the project. Use a smaller source image."); return; }
+    const data = crop.data;
     const [pivotX,pivotY] = PIVOTS[assignment];
-    const centerX = (left+width/2)/image.naturalWidth;
-    const centerY = (top+height/2)/image.naturalHeight;
+    // x/y are the world-space joint coordinates, not the crop center.
+    const pivotImageX = left + width * pivotX / 100;
+    const pivotImageY = top + height * pivotY / 100;
     const asset: RigPartAsset = {
       id: crypto.randomUUID(),
       name: PARTS.find(part => part.id===assignment)?.label ?? assignment,
       image: data,
-      x: 12+centerX*76, y: 9+centerY*82,
+      x: 12+(pivotImageX/image.naturalWidth)*76,
+      y: 9+(pivotImageY/image.naturalHeight)*82,
       width: Math.max(4,(width/image.naturalWidth)*76),
       pivotX,pivotY,rotation:0,visible:true,
     };
     onCreate(assignment,asset);
-    setStatus(`${asset.name} draft crop added. Refine its silhouette and joint in Rigging before animating.`);
+    setStatus(`${asset.name} added · ${crop.method}. Check the edge and pivot in Rigging before animating.`);
     setAnalysis(current => current ? {...current,detections:current.detections.filter(item=>item.id!==selected.id)} : current);
     setSelectedId("");
   };
@@ -233,8 +300,8 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
           </select>
         </label>
         {selected.notes && <div className="notice"><AlertCircle size={15}/><span><strong>AI observation</strong><small>{selected.notes}</small></span></div>}
-        <div className="notice"><AlertCircle size={15}/><span><strong>Draft crop, not final segmentation</strong><small>This action crops the selected rectangle. It does not remove background pixels or recreate hidden joints. Refine the silhouette with the manual cutter before treating it as an animation layer.</small></span></div>
-        <button className="button primary reference-action" onClick={addSelected}><Check size={15}/> Add draft crop to rig</button>
+        <div className="notice"><AlertCircle size={15}/><span><strong>AI-assisted cutout draft</strong><small>The editor preserves existing transparency or attempts conservative edge-connected cleanup on a flat background. Inspect the result carefully: complex backgrounds, overlapping parts and hidden pixels still need manual cleanup.</small></span></div>
+        <button className="button primary reference-action" onClick={addSelected}><Check size={15}/> Create cleaned draft layer</button>
       </div>}
     </>}
     <div className="notice"><AlertCircle size={16}/><span><strong>Quality & confidence</strong><small>Low-confidence, unknown, oversized and out-of-character boxes are rejected. The AI proposes regions; clean transparent cutouts and correct joint pivots still require review. Hidden artwork cannot be inferred reliably from a single flattened image.</small></span></div>

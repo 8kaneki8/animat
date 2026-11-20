@@ -180,8 +180,10 @@ export default function OrBiSpriteExtractor({ onCreate }: { onCreate: (part: Par
     const asset: RigPartAsset = {
       id: crypto.randomUUID(), name: CHOICES.find(item => item.id === choice)?.label || choice,
       image: sprite.image,
-      x: 12 + (sprite.x + sprite.width / 2) * 76,
-      y: 9 + (sprite.y + sprite.height / 2) * 82,
+      // The renderer anchors the layer at its joint, so place the saved
+      // world coordinate at the selected pivot inside the extracted sprite.
+      x: 12 + (sprite.x + sprite.width * pivotX / 100) * 76,
+      y: 9 + (sprite.y + sprite.height * pivotY / 100) * 82,
       width: Math.max(4, sprite.width * 76), pivotX, pivotY, rotation: 0, visible: true,
     };
     onCreate(choice, asset);
