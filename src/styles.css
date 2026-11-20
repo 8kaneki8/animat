@@ -201,3 +201,29 @@ body{min-height:100vh;overflow-x:hidden;overflow-y:visible}
 .inspector-content{overflow:visible;flex:none}
 @media(max-width:650px){.workspace{min-height:0}.center-stage{min-height:650px}.inspector{min-height:0}.inspector-content{overflow:visible;flex:none}}
 @media(max-height:760px) and (min-width:651px){.app-shell{height:auto;min-height:100vh}.workspace{min-height:760px}}
+
+/* Interactive OrBi responses layered over the approved original artwork */
+.orbi-real-scene{cursor:pointer;outline:none}
+.orbi-art-wrap{transition:transform .18s ease-out;will-change:transform}
+.orbi-is-hovered .orbi-real-stage{filter:drop-shadow(0 0 20px #a78bfa35)}
+.orbi-reaction-bubble{position:absolute;z-index:7;top:17%;left:50%;display:flex;align-items:center;gap:7px;padding:9px 13px;border:1px solid #c4a4ff88;border-radius:14px 14px 14px 4px;background:#171329ed;color:#f1eaff;font-size:11px;font-weight:700;box-shadow:0 8px 28px #0007;pointer-events:none;animation:orbi-reaction-pop 1.45s ease both;backdrop-filter:blur(8px)}
+.orbi-reaction-bubble span{color:#d9b8ff;font-size:15px}
+.orbi-interaction-hint{position:absolute;z-index:5;left:50%;bottom:42px;transform:translateX(-50%);padding:5px 9px;border:1px solid #ffffff18;border-radius:20px;background:#0b0d14a8;color:#9993b2;font-size:7px;letter-spacing:1px;white-space:nowrap;pointer-events:none;opacity:.8}
+.orbi-is-hovered .orbi-interaction-hint{color:#d6c2ff;border-color:#a78bfa66}
+.orbi-real-scene.reaction-happy .orbi-art-wrap{animation:orbi-react-bounce .52s ease}
+.orbi-real-scene.reaction-curious .orbi-art-wrap{animation:orbi-react-tilt .6s ease}
+.orbi-real-scene.reaction-excited .orbi-art-wrap{animation:orbi-react-excited .7s ease}
+.orbi-real-scene.reaction-surprised .orbi-art-wrap{animation:orbi-react-pop .48s ease}
+@keyframes orbi-reaction-pop{0%{opacity:0;transform:translate(-50%,10px) scale(.8)}15%,78%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-8px) scale(.96)}}
+@keyframes orbi-react-bounce{0%,100%{translate:0 0}35%{translate:0 -13px}65%{translate:0 2px}}
+@keyframes orbi-react-tilt{0%,100%{rotate:0deg}30%{rotate:-4deg}70%{rotate:3deg}}
+@keyframes orbi-react-excited{0%,100%{scale:1}25%{scale:1.055}50%{scale:.99}75%{scale:1.035}}
+@keyframes orbi-react-pop{0%,100%{scale:1}35%{scale:1.07}65%{scale:.98}}
+.quick-emote-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0 16px}
+.quick-emote{min-height:64px;display:flex;align-items:center;gap:9px;padding:9px;border:1px solid #ffffff18;border-radius:9px;background:#ffffff06;color:#c8c4d7;text-align:left}
+.quick-emote:hover,.quick-emote.active{border-color:#a78bfa88;background:#8b5cf61a;color:#f0e8ff}
+.quick-emote-face{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:8px;background:#8b5cf622;color:#e0caff;font-size:17px}
+.quick-emote span:last-child{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:600}
+.quick-emote small{font-size:8px;color:#8e8ba2;font-weight:400}
+@media(prefers-reduced-motion:reduce){.orbi-reaction-bubble,.orbi-real-scene.reaction-happy .orbi-art-wrap,.orbi-real-scene.reaction-curious .orbi-art-wrap,.orbi-real-scene.reaction-excited .orbi-art-wrap,.orbi-real-scene.reaction-surprised .orbi-art-wrap{animation:none!important}.orbi-art-wrap{transition:none}}
+@media(max-width:650px){.orbi-interaction-hint{bottom:60px}.orbi-reaction-bubble{top:22%}}
