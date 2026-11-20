@@ -73,7 +73,7 @@ function normalizeAnalysis(payload: unknown): Analysis {
     characterBox,
     model: String(response.model || "Vision model"),
     analysisVersion: String(response.analysisVersion || "legacy"),
-    identityConfidence: Number.isFinite(Number(verification.identityConfidence)) ? Math.max(0,Math.min(1,Number(verification.identityConfidence))) : null,
+    identityConfidence: verification.identityConfidence !== null && verification.identityConfidence !== undefined && Number.isFinite(Number(verification.identityConfidence)) ? Math.max(0,Math.min(1,Number(verification.identityConfidence))) : null,
     verificationReason: String(verification.reason || "Character identity matched."),
   };
 }
