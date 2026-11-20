@@ -140,7 +140,10 @@ export default function App(){
    const image=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(new Error("Read failed"));reader.readAsDataURL(file);});
    const img=await new Promise<HTMLImageElement>((resolve,reject)=>{const el=new Image();el.onload=()=>resolve(el);el.onerror=()=>reject(new Error("Image failed"));el.src=image;});
    const scale=Math.min(1,1200/Math.max(img.width,img.height));const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));
-   const ctx=canvas.getContext("2d");if(!ctx)throw new Error("Canvas unavailable");ctx.drawImage(img,0,0,canvas.width,canvas.height);
+   const ctx=canvas.getContext("2d",{willReadFrequently:true});if(!ctx)throw new Error("Canvas unavailable");ctx.drawImage(img,0,0,canvas.width,canvas.height);
+   const rgba=ctx.getImageData(0,0,canvas.width,canvas.height).data;let transparentPixels=0;
+   for(let i=3;i<rgba.length;i+=4)if(rgba[i]<245)transparentPixels++;
+   if(transparentPixels<canvas.width*canvas.height*0.005){setNotice("This layer has no usable transparency. Use a transparent PNG/WebP or create a cutout in Part Cutter first.");return;}
    const data=canvas.toDataURL("image/png");if(data.length>2500000){setNotice("Body-part image is too large for this project");return;}
    const layout:Record<RigPartName,{x:number;y:number;width:number;pivotX:number;pivotY:number}>={cape:{x:50,y:48,width:64,pivotX:50,pivotY:12},leftLeg:{x:43,y:77,width:25,pivotX:50,pivotY:8},rightLeg:{x:57,y:77,width:25,pivotX:50,pivotY:8},torso:{x:50,y:55,width:43,pivotX:50,pivotY:45},leftArm:{x:34,y:49,width:26,pivotX:82,pivotY:15},rightArm:{x:66,y:49,width:26,pivotX:18,pivotY:15},head:{x:50,y:25,width:45,pivotX:50,pivotY:78}};
    const pos=layout[part];const asset:RigPartAsset={id:crypto.randomUUID(),name:file.name.replace(/\.[^.]+$/,""),image:data,...pos,rotation:0,visible:true};
