@@ -238,3 +238,38 @@ body{min-height:100vh;overflow-x:hidden;overflow-y:visible}
 .orbi-art-wrap{min-width:0;min-height:0;width:100%;height:100%;}
 .orbi-art-loading{position:absolute;z-index:8;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 12px;border:1px solid #ffffff22;border-radius:8px;background:#10131edb;color:#d6c2ff;font-size:10px;white-space:nowrap;pointer-events:none}
 .orbi-art-load-error{max-width:min(85%,420px);line-height:1.55}
+
+/* Studio theme presets */
+.theme-switch{white-space:nowrap}
+.app-shell[data-theme="aurora"]{background:radial-gradient(ellipse at 52% 40%,#102a35 0%,#0b1823 58%,#07111b 100%);color:#e5f7fb}
+.app-shell[data-theme="aurora"] .topbar,.app-shell[data-theme="aurora"] .leftbar,.app-shell[data-theme="aurora"] .inspector{background:#071a25e8;border-color:#62d7e51c}
+.app-shell[data-theme="aurora"] .viewport{background:#0c202b;border-color:#65dce52b}
+.app-shell[data-theme="aurora"] .brand-mark{color:#8af1e5;background:linear-gradient(145deg,#0ea5a455,#22d3ee33);border-color:#67e8f955}
+.app-shell[data-theme="aurora"] .button.primary{background:linear-gradient(110deg,#0f9f9a,#2563eb);box-shadow:0 5px 20px #0f9f9a30}
+.app-shell[data-theme="aurora"] .mode.active{background:linear-gradient(100deg,#0e9aa522,#0e9aa508);border-color:#5eead455}
+.app-shell[data-theme="aurora"] .mode.active .mode-icon,.app-shell[data-theme="aurora"] .nav-item.selected svg{color:#7ce9df}
+.app-shell[data-theme="aurora"] .chip.active{color:#c7fffa;border-color:#5eead466;background:#0f9f9a22}
+.app-shell[data-theme="aurora"] .nav-item.selected{background:#ffffff0d;color:#e5fffc}
+.app-shell[data-theme="light"]{background:linear-gradient(145deg,#f5f7fc,#e9edf6);color:#202638}
+.app-shell[data-theme="light"] .topbar,.app-shell[data-theme="light"] .leftbar,.app-shell[data-theme="light"] .inspector{background:#f9fbff;border-color:#1725541a}
+.app-shell[data-theme="light"] .brand{color:#202638}
+.app-shell[data-theme="light"] .brand small,.app-shell[data-theme="light"] .eyebrow,.app-shell[data-theme="light"] .muted,.app-shell[data-theme="light"] .autosave{color:#68738b}
+.app-shell[data-theme="light"] .project-name,.app-shell[data-theme="light"] .nav-item,.app-shell[data-theme="light"] .mode{color:#4c5870}
+.app-shell[data-theme="light"] .mode.active,.app-shell[data-theme="light"] .nav-item.selected{background:#ede9fe;color:#4c1d95;border-color:#c4b5fd}
+.app-shell[data-theme="light"] .mode small,.app-shell[data-theme="light"] .help-card small,.app-shell[data-theme="light"] .user-chip small{color:#778198}
+.app-shell[data-theme="light"] .mode-icon{background:#eef0f7;color:#667085}
+.app-shell[data-theme="light"] .viewport{background:#e7ebf4;border-color:#cbd3e2;box-shadow:0 18px 50px #33415518}
+.app-shell[data-theme="light"] .viewport-label,.app-shell[data-theme="light"] .viewport-bottom,.app-shell[data-theme="light"] .keycap{color:#475569}
+.app-shell[data-theme="light"] .viewport-grid{background-image:linear-gradient(#64748b12 1px,transparent 1px),linear-gradient(90deg,#64748b12 1px,transparent 1px)}
+.app-shell[data-theme="light"] .stage-header h1,.app-shell[data-theme="light"] .inspector-head h2,.app-shell[data-theme="light"] .section-label{color:#202638}
+.app-shell[data-theme="light"] .stage-header p,.app-shell[data-theme="light"] .timeline-title>span:last-child{color:#64748b}
+.app-shell[data-theme="light"] .button.secondary,.app-shell[data-theme="light"] .icon-button,.app-shell[data-theme="light"] .play-toggle{background:#fff;border-color:#d8deea;color:#475569}
+.app-shell[data-theme="light"] .button.primary{background:linear-gradient(110deg,#6d28d9,#9333ea);color:white}
+.app-shell[data-theme="light"] .notice,.app-shell[data-theme="light"] .help-card,.app-shell[data-theme="light"] .user-chip,.app-shell[data-theme="light"] .rig-part-editor,.app-shell[data-theme="light"] .accessory-editor,.app-shell[data-theme="light"] .emote-card{background:#fff;border-color:#dfe4ee;color:#475569}
+.app-shell[data-theme="light"] .notice strong,.app-shell[data-theme="light"] .sprite-candidate,.app-shell[data-theme="light"] .range-control,.app-shell[data-theme="light"] .color-control{color:#334155}
+.app-shell[data-theme="light"] .notice small,.app-shell[data-theme="light"] .reference-filename,.app-shell[data-theme="light"] .range-control b{color:#64748b}
+.app-shell[data-theme="light"] .expression,.app-shell[data-theme="light"] .motion-option,.app-shell[data-theme="light"] .material,.app-shell[data-theme="light"] .chip{background:#fff;border-color:#d8deea;color:#475569}
+.app-shell[data-theme="light"] .expression.active,.app-shell[data-theme="light"] .motion-option.active,.app-shell[data-theme="light"] .material.active,.app-shell[data-theme="light"] .chip.active{background:#f1eafe;border-color:#c4b5fd;color:#5b21b6}
+.app-shell[data-theme="light"] input:not([type="color"]):not([type="range"]),.app-shell[data-theme="light"] select{background:#fff;color:#263247;border-color:#d8deea}
+.app-shell[data-theme="light"] .timeline-strip,.app-shell[data-theme="light"] .inspector-head{border-color:#dfe4ee}
+@media(max-width:650px){.theme-switch{font-size:0;width:34px;padding:0;justify-content:center}.theme-switch svg{flex:none}}
