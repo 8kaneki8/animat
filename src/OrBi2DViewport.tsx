@@ -28,6 +28,7 @@ export default function OrBi2DViewport({ children }: { children: ReactNode }) {
   const resetCamera = () => updateCamera({ scale: 1, x: 0, y: 0 });
 
   const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
+    if (!event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
     const current = cameraRef.current;
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -85,7 +86,7 @@ export default function OrBi2DViewport({ children }: { children: ReactNode }) {
       onPointerUp={finishDrag}
       onPointerCancel={finishDrag}
       onDoubleClick={resetCamera}
-      aria-label="OrBi 2D canvas. Scroll to zoom, drag to pan, double-click to reset."
+      aria-label="OrBi 2D canvas. Scroll to move the page, Ctrl+scroll to zoom, drag to pan, double-click to reset."
     >
       <div
         className="viewport-2d-content"
