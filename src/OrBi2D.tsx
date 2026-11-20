@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { ORBI_BASE_ART } from "./orbiAssets";
 type Props = { body:string; accent:string; eyes:string; expression:string; motion:string; skinSrc?:string; skinLabel?:string; accessories?:{id:string;name:string;image:string;x:number;y:number;scale:number;rotation:number;visible?:boolean}[] };
 const reactions = [{id:"happy",text:"Hi there!",symbol:"✦"},{id:"curious",text:"What is that?",symbol:"?"},{id:"excited",text:"Yay!",symbol:"✧"},{id:"surprised",text:"Oh!",symbol:"!"}];
@@ -6,7 +7,7 @@ export default function OrBi2D({expression,motion,skinSrc,skinLabel,accessories=
  const mood=expression.toLowerCase(); const movement=motion.toLowerCase(); const animated=movement!=="off";
  const [reactionIndex,setReactionIndex]=useState(-1); const [pointer,setPointer]=useState({x:0,y:0}); const [isHovered,setIsHovered]=useState(false);
  useEffect(()=>{if(reactionIndex<0)return;const timer=window.setTimeout(()=>setReactionIndex(-1),1450);return()=>window.clearTimeout(timer);},[reactionIndex]);
- const handlePointerMove=(event:React.PointerEvent<HTMLDivElement>)=>{const bounds=event.currentTarget.getBoundingClientRect();setPointer({x:Math.max(-1,Math.min(1,((event.clientX-bounds.left)/bounds.width-.5)*2)),y:Math.max(-1,Math.min(1,((event.clientY-bounds.top)/bounds.height-.5)*2))});};
+ const handlePointerMove=(event:ReactPointerEvent<HTMLDivElement>)=>{const bounds=event.currentTarget.getBoundingClientRect();setPointer({x:Math.max(-1,Math.min(1,((event.clientX-bounds.left)/bounds.width-.5)*2)),y:Math.max(-1,Math.min(1,((event.clientY-bounds.top)/bounds.height-.5)*2))});};
  const triggerReaction=()=>setReactionIndex(index=>(index+1)%reactions.length); const reaction=reactions[reactionIndex];
  return <div className={"orbi2d-scene orbi-real-scene motion-"+movement+(isHovered?" orbi-is-hovered":"")+(reaction?" reaction-"+reaction.id:"")} aria-label="Interactive official OrBi character preview" onPointerEnter={()=>setIsHovered(true)} onPointerLeave={()=>{setIsHovered(false);setPointer({x:0,y:0});}} onPointerMove={handlePointerMove} onClick={triggerReaction} role="button" tabIndex={0} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();triggerReaction();}}}>
   <div className="orbi2d-grid" aria-hidden="true"/><div className="orbi2d-orbit orbit-one" aria-hidden="true"/><div className="orbi2d-orbit orbit-two" aria-hidden="true"/>
