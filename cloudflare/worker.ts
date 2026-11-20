@@ -112,7 +112,7 @@ Return no markdown and no commentary.`;
       }
       const text = result.candidates?.[0]?.content?.parts?.find(part => part.text)?.text;
       if (!text) return json({ error: "Gemini returned an empty analysis." }, 502, headers);
-      const parsed = JSON.parse(text) as { characterName?: string; parts?: Array<{ name: string; label: string; category: string; bbox: number[]; confidence: number; notes: string }> };
+      const parsed = JSON.parse(text) as { characterName?: string; characterFound?: boolean; parts?: Array<{ name: string; label: string; category: string; bbox: number[]; confidence: number; notes: string }> };
       const allowedParts = new Set(["head", "torso", "leftArm", "rightArm", "leftLeg", "rightLeg", "cape", "crown", "faceDetails"]);
       const parts = (parsed.parts || []).filter(part =>
         allowedParts.has(part.name) && Number.isFinite(part.confidence) && part.confidence >= 0.4 &&
