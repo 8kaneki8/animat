@@ -78,6 +78,8 @@ function detectForeground(image: HTMLImageElement) {
       if (y > 0) push(p - width);
       if (y + 1 < height) push(p + width);
     }
+    const removedRatio = write / total;
+    if (removedRatio < 0.001 || removedRatio > 0.92) throw new Error("The background is not safely separable by the local color model. Use a transparent PNG or a cleaner, plain background.");
     for (let p = 0; p < total; p++) foreground[p] = visited[p] ? 0 : (rgba[p * 4 + 3] > 24 ? 1 : 0);
   }
   return { width, height, rgba, foreground, sourceWidth: image.naturalWidth, sourceHeight: image.naturalHeight, hasAlpha };
@@ -149,6 +151,8 @@ function analyzePixels(image: HTMLImageElement): Candidate[] {
     let left = width, top = height, right = 0, bottom = 0;
     for (const p of dominant) { const x = p % width, y = Math.floor(p / width); left = Math.min(left, x); top = Math.min(top, y); right = Math.max(right, x + 1); bottom = Math.max(bottom, y + 1); }
     const bw = right - left, bh = bottom - top;
+    const dominantMask = new Uint8Array(total);
+    for (const p of dominant) dominantMask[p] = 1;
     const zones: { name: string; part: PartChoice; x1: number; y1: number; x2: number; y2: number }[] = [
       { name: "Head zone (geometric draft)", part: "head", x1: .18, y1: 0, x2: .82, y2: .39 },
       { name: "Torso zone (geometric draft)", part: "torso", x1: .22, y1: .30, x2: .78, y2: .79 },
@@ -161,7 +165,7 @@ function analyzePixels(image: HTMLImageElement): Candidate[] {
       const x1 = Math.max(0, left + Math.floor(bw * zone.x1)), x2 = Math.min(width, left + Math.ceil(bw * zone.x2));
       const y1 = Math.max(0, top + Math.floor(bh * zone.y1)), y2 = Math.min(height, top + Math.ceil(bh * zone.y2));
       const zonePixels: number[] = [];
-      for (let y = y1; y < y2; y++) for (let x = x1; x < x2; x++) { const p = y * width + x; if (foreground[p]) zonePixels.push(p); }
+      for (let y = y1; y < y2; y++) for (let x = x1; x < x2; x++) { const p = y * width + x; if (dominantMask[p]) zonePixels.push(p); }
       const candidate = makeCandidate("zone-" + index, zone.name, Int32Array.from(zonePixels), width, zone.part, "geometric-zone");
       if (candidate && candidate.area >= minArea) candidates.push(candidate);
     });
