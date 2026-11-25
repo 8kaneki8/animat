@@ -4,7 +4,7 @@ interface Env {
   ALLOWED_ORIGIN?: string;
 }
 type Box = [number, number, number, number];
-type Part = { name: string; label?: string; bbox: number[]; confidence?: number; notes?: string };
+type Part = { name: string; label?: string; bbox: number[]; polygon?: number[][]; confidence?: number; notes?: string };
 
 const corsHeaders = (allowed: string) => ({
   "Access-Control-Allow-Origin": allowed,
@@ -120,8 +120,9 @@ export default {
         "IMAGE 1 is the submitted full scene; IMAGE 2 is the canonical OrBi reference. " +
         "The verified OrBi region in IMAGE 1 is [ymin=" + cy1 + ", xmin=" + cx1 + ", ymax=" + cy2 + ", xmax=" + cx2 + "] on a 0..1000 scale. " +
         "Inspect ONLY this region. Detect visible, distinct parts of this one OrBi: head, torso, leftArm, rightArm, leftLeg, rightLeg, cape, crown. " +
-        "Return JSON {parts:[{name,label,bbox,confidence,notes}]}. bbox coordinates are normalized 0..1000 relative to the selected character region, " +
-        "in [ymin,xmin,ymax,xmax] order. Use exact part names. confidence is 0..1 and must reflect boundary certainty, not guesswork. " +
+        "Return JSON {parts:[{name,label,bbox,polygon,confidence,notes}]}. bbox coordinates are normalized 0..1000 relative to the selected character region, " +
+        "in [ymin,xmin,ymax,xmax] order. polygon is an optional tight outline as 6..32 [x,y] points, each normalized 0..1000 relative to the same character region, ordered around the visible part boundary. " +
+        "Trace the actual visible silhouette rather than a rectangle; do not include neighboring parts or background. Omit polygon if the boundary cannot be estimated reliably. Use exact part names. confidence is 0..1 and must reflect boundary certainty, not guesswork. " +
         "Left/right refer to OrBi's own anatomical left and right, not the viewer's. Return at most one suggestion for each part. " +
         "Fit each box tightly around the visible part; avoid including neighboring parts or empty margins. " +
         "Never return the whole character as a part. Crown is an accessory; cape is a separate cloth layer. " +
@@ -144,12 +145,19 @@ export default {
           clamp(cx1 + x2 / 1000 * (cx2 - cx1)),
         ];
         if (!validBox(box)) continue;
+        const polygon = Array.isArray(item.polygon) && item.polygon.length >= 4 && item.polygon.length <= 48 &&
+          item.polygon.every((point) => Array.isArray(point) && point.length === 2 &&
+            point.every((value) => Number.isFinite(value) && value >= 0 && value <= 1000))
+          ? item.polygon.map(([x,y]) => [
+              clamp(cx1 + Number(x) / 1000 * (cx2 - cx1)),
+              clamp(cy1 + Number(y) / 1000 * (cy2 - cy1)),
+            ]) : undefined;
         const partArea = (box[2]-box[0])*(box[3]-box[1]);
         const characterArea = (cy2-cy1)*(cx2-cx1);
         if (partArea / characterArea > 0.78) continue;
         const duplicate = accepted.some((old) => old.name === item.name &&
           Math.abs(old.bbox[0]-box[0]) < 8 && Math.abs(old.bbox[1]-box[1]) < 8);
-        if (!duplicate) accepted.push({ name:item.name, label:String(item.label || item.name), bbox:box, confidence, notes:String(item.notes || "") });
+        if (!duplicate) accepted.push({ name:item.name, label:String(item.label || item.name), bbox:box, ...(polygon ? { polygon } : {}), confidence, notes:String(item.notes || "") });
       }
       accepted.sort((a,b)=>b.confidence-a.confidence);
       return json({
@@ -162,7 +170,7 @@ export default {
           identityConfidence: located.identityConfidence !== null && located.identityConfidence !== undefined && Number.isFinite(Number(located.identityConfidence)) ? Math.max(0,Math.min(1,Number(located.identityConfidence))) : null,
           reason: accepted.length ? "OrBi identity matched; review the part suggestions." : "OrBi identity matched, but no independently separable parts were detected.",
         },
-        analysisVersion: "orbi-vision-2",
+        analysisVersion: "orbi-vision-3-polygons",
         model,
       }, 200, headers);
     } catch (error) {

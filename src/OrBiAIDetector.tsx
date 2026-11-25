@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bot, Check, ScanSearch, AlertCircle, RefreshCw, ShieldCheck } from "lucide-react";
+import { Bot, Check, ScanSearch, AlertCircle, RefreshCw, ShieldCheck, Layers3 } from "lucide-react";
 import type { RigPartAsset, RigPartName } from "./OrBiRig2D";
 
 type PartChoice = RigPartName | "crown";
 type Box = [number, number, number, number];
-type Detection = { id: string; name: string; label: string; confidence: number; box: Box; notes: string };
+type Detection = { id: string; name: string; label: string; confidence: number; box: Box; polygon?: [number, number][]; notes: string };
 type Analysis = { detections: Detection[]; characterBox: Box | null; model: string; analysisVersion: string; identityConfidence: number | null; verificationReason: string };
 
 const WORKER_URL = "https://spring-pine-f61e.mohmedayman7521.workers.dev";
@@ -28,12 +28,26 @@ function readBox(value: unknown): Box | null {
   return [Math.round(y1), Math.round(x1), Math.round(y2), Math.round(x2)];
 }
 
-function makeTransparentCrop(image: HTMLImageElement, left: number, top: number, width: number, height: number): { data: string; method: string } {
+function makeTransparentCrop(image: HTMLImageElement, left: number, top: number, width: number, height: number, polygon?: [number, number][]): { data: string; method: string } {
   const canvas = document.createElement("canvas");
   canvas.width = width; canvas.height = height;
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) throw new Error("Could not create the crop canvas.");
   context.drawImage(image, left, top, width, height, 0, 0, width, height);
+  if (polygon && polygon.length >= 4) {
+    context.save();
+    context.beginPath();
+    polygon.forEach(([x,y], index) => {
+      const px = x / 1000 * image.naturalWidth - left;
+      const py = y / 1000 * image.naturalHeight - top;
+      if (index === 0) context.moveTo(px,py); else context.lineTo(px,py);
+    });
+    context.closePath();
+    context.globalCompositeOperation = "destination-in";
+    context.fillStyle = "#fff";
+    context.fill();
+    context.restore();
+  }
   const pixels = context.getImageData(0, 0, width, height);
   const data = pixels.data;
   const total = width * height;
@@ -124,9 +138,13 @@ function normalizeAnalysis(payload: unknown): Analysis {
     const key = normalized + ":" + box.map(v => Math.round(v/5)).join(":");
     if (seen.has(key)) return;
     seen.add(key);
+    const polygon = Array.isArray(item.polygon) && item.polygon.length >= 4 && item.polygon.length <= 48 &&
+      item.polygon.every(point => Array.isArray(point) && point.length === 2 &&
+        point.every(value => Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 1000))
+      ? item.polygon.map(point => [Number(point[0]), Number(point[1])] as [number,number]) : undefined;
     accepted.push({
       id: crypto.randomUUID(), name, label: String(item.label || name),
-      confidence, box, notes: String(item.notes || ""),
+      confidence, box, ...(polygon ? { polygon } : {}), notes: String(item.notes || ""),
     });
   });
   accepted.sort((a,b) => b.confidence-a.confidence);
@@ -221,6 +239,52 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
     }
   };
 
+  const createAllDetected = () => {
+    if (!analysis || !image) return;
+    const created: string[] = [];
+    const skipped: string[] = [];
+    const used = new Set<string>();
+    for (const detection of analysis.detections) {
+      const part = mapPart(detection.name);
+      if (!part || used.has(part)) { skipped.push(detection.label); continue; }
+      const [y1,x1,y2,x2] = detection.box;
+      const left = Math.max(0, Math.floor((x1/1000)*image.naturalWidth));
+      const top = Math.max(0, Math.floor((y1/1000)*image.naturalHeight));
+      const right = Math.min(image.naturalWidth, Math.ceil((x2/1000)*image.naturalWidth));
+      const bottom = Math.min(image.naturalHeight, Math.ceil((y2/1000)*image.naturalHeight));
+      const width = Math.max(1,right-left), height = Math.max(1,bottom-top);
+      try {
+        const crop = makeTransparentCrop(image,left,top,width,height,detection.polygon);
+        if (crop.data.length > 3_500_000) { skipped.push(detection.label + " (layer too large)"); continue; }
+        const [pivotX,pivotY] = PIVOTS[part];
+        const pivotImageX = left + width * pivotX / 100;
+        const pivotImageY = top + height * pivotY / 100;
+        const asset: RigPartAsset = {
+          id: crypto.randomUUID(),
+          name: PARTS.find(item => item.id===part)?.label ?? part,
+          image: crop.data,
+          x: 12+(pivotImageX/image.naturalWidth)*76,
+          y: 9+(pivotImageY/image.naturalHeight)*82,
+          width: Math.max(4,(width/image.naturalWidth)*76),
+          pivotX,pivotY,rotation:0,visible:true,
+        };
+        onCreate(part,asset);
+        used.add(part);
+        created.push(asset.name);
+      } catch {
+        skipped.push(detection.label + " (could not isolate)");
+      }
+    }
+    if (!created.length) {
+      setError("No detected parts could be converted into transparent layers. Review the suggestions or use the Part Cutter.");
+      return;
+    }
+    setStatus(`Auto-rig created ${created.length} layers: ${created.join(", ")}.${skipped.length ? " Skipped: " + skipped.join(", ") + "." : ""} Inspect pivots and overlaps in Rigging before playback.`);
+    setAnalysis(current => current ? {...current,detections:[]} : current);
+    setSelectedId("");
+    setError("");
+  };
+
   const addSelected = () => {
     if (!selected || !image) return;
     const [y1,x1,y2,x2] = selected.box;
@@ -231,7 +295,7 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
     const width = Math.max(1,right-left), height = Math.max(1,bottom-top);
     let crop: { data: string; method: string };
     try {
-      crop = makeTransparentCrop(image,left,top,width,height);
+      crop = makeTransparentCrop(image,left,top,width,height,selected.polygon);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not clean the crop background.");
       return;
@@ -281,10 +345,13 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
         <svg viewBox={`0 0 ${image.naturalWidth} ${image.naturalHeight}`} preserveAspectRatio="none"
           style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}}>
           {analysis.characterBox && drawBox(analysis.characterBox,"#fbbf24","rgba(251,191,36,.035)","character")}
-          {detections.map(item => drawBox(item.box,item.id===selectedId?"#68e6ff":"#a78bfa",item.id===selectedId?"rgba(104,230,255,.16)":"rgba(167,139,250,.06)",item.id))}
+          {detections.map(item => <g key={item.id}>{drawBox(item.box,item.id===selectedId?"#68e6ff":"#a78bfa",item.id===selectedId?"rgba(104,230,255,.16)":"rgba(167,139,250,.06)",item.id)}{item.polygon && <polygon points={item.polygon.map(([x,y])=>`${x/1000*image.naturalWidth},${y/1000*image.naturalHeight}`).join(" ")} fill="rgba(104,230,255,.08)" stroke={item.id===selectedId?"#68e6ff":"#a78bfa"} strokeWidth="2" vectorEffect="non-scaling-stroke"/>}</g>)}
         </svg>
       </div>
       <div className="section-label"><span>Verified character & suggestions</span><span className="muted">{detections.length} remaining</span></div>
+      {detections.length > 0 && <button className="button primary reference-action" onClick={createAllDetected}>
+        <Layers3 size={15}/> Auto-create all detected layers ({detections.length})
+      </button>}
       <div className="reference-filename">Identity confidence: {analysis.identityConfidence===null?"not supplied":Math.round(analysis.identityConfidence*100)+"%"} · {analysis.analysisVersion}</div>
       <div className="sprite-candidate-grid">
         {detections.map(item => <button key={item.id} className={"sprite-candidate "+(selectedId===item.id?"active":"")}
