@@ -4,7 +4,7 @@ import type { RigPartAsset, RigPartName } from "./OrBiRig2D";
 
 type PartChoice = RigPartName | "crown";
 type Box = [number, number, number, number];
-type Detection = { id: string; name: string; label: string; confidence: number; box: Box; notes: string };
+type Detection = { id: string; name: string; label: string; confidence: number; box: Box; polygon?: [number, number][]; notes: string };
 type Analysis = { detections: Detection[]; characterBox: Box | null; model: string; analysisVersion: string; identityConfidence: number | null; verificationReason: string };
 
 const WORKER_URL = "https://spring-pine-f61e.mohmedayman7521.workers.dev";
@@ -28,12 +28,26 @@ function readBox(value: unknown): Box | null {
   return [Math.round(y1), Math.round(x1), Math.round(y2), Math.round(x2)];
 }
 
-function makeTransparentCrop(image: HTMLImageElement, left: number, top: number, width: number, height: number): { data: string; method: string } {
+function makeTransparentCrop(image: HTMLImageElement, left: number, top: number, width: number, height: number, polygon?: [number, number][]): { data: string; method: string } {
   const canvas = document.createElement("canvas");
   canvas.width = width; canvas.height = height;
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) throw new Error("Could not create the crop canvas.");
   context.drawImage(image, left, top, width, height, 0, 0, width, height);
+  if (polygon && polygon.length >= 4) {
+    context.save();
+    context.beginPath();
+    polygon.forEach(([x,y], index) => {
+      const px = x / 1000 * image.naturalWidth - left;
+      const py = y / 1000 * image.naturalHeight - top;
+      if (index === 0) context.moveTo(px,py); else context.lineTo(px,py);
+    });
+    context.closePath();
+    context.globalCompositeOperation = "destination-in";
+    context.fillStyle = "#fff";
+    context.fill();
+    context.restore();
+  }
   const pixels = context.getImageData(0, 0, width, height);
   const data = pixels.data;
   const total = width * height;
@@ -124,9 +138,13 @@ function normalizeAnalysis(payload: unknown): Analysis {
     const key = normalized + ":" + box.map(v => Math.round(v/5)).join(":");
     if (seen.has(key)) return;
     seen.add(key);
+    const polygon = Array.isArray(item.polygon) && item.polygon.length >= 4 && item.polygon.length <= 48 &&
+      item.polygon.every(point => Array.isArray(point) && point.length === 2 &&
+        point.every(value => Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 1000))
+      ? item.polygon.map(point => [Number(point[0]), Number(point[1])] as [number,number]) : undefined;
     accepted.push({
       id: crypto.randomUUID(), name, label: String(item.label || name),
-      confidence, box, notes: String(item.notes || ""),
+      confidence, box, ...(polygon ? { polygon } : {}), notes: String(item.notes || ""),
     });
   });
   accepted.sort((a,b) => b.confidence-a.confidence);
@@ -236,7 +254,7 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
       const bottom = Math.min(image.naturalHeight, Math.ceil((y2/1000)*image.naturalHeight));
       const width = Math.max(1,right-left), height = Math.max(1,bottom-top);
       try {
-        const crop = makeTransparentCrop(image,left,top,width,height);
+        const crop = makeTransparentCrop(image,left,top,width,height,detection.polygon);
         if (crop.data.length > 3_500_000) { skipped.push(detection.label + " (layer too large)"); continue; }
         const [pivotX,pivotY] = PIVOTS[part];
         const pivotImageX = left + width * pivotX / 100;
@@ -277,7 +295,7 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
     const width = Math.max(1,right-left), height = Math.max(1,bottom-top);
     let crop: { data: string; method: string };
     try {
-      crop = makeTransparentCrop(image,left,top,width,height);
+      crop = makeTransparentCrop(image,left,top,width,height,selected.polygon);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not clean the crop background.");
       return;
@@ -327,7 +345,7 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
         <svg viewBox={`0 0 ${image.naturalWidth} ${image.naturalHeight}`} preserveAspectRatio="none"
           style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}}>
           {analysis.characterBox && drawBox(analysis.characterBox,"#fbbf24","rgba(251,191,36,.035)","character")}
-          {detections.map(item => drawBox(item.box,item.id===selectedId?"#68e6ff":"#a78bfa",item.id===selectedId?"rgba(104,230,255,.16)":"rgba(167,139,250,.06)",item.id))}
+          {detections.map(item => <g key={item.id}>{drawBox(item.box,item.id===selectedId?"#68e6ff":"#a78bfa",item.id===selectedId?"rgba(104,230,255,.16)":"rgba(167,139,250,.06)",item.id)}{item.polygon && <polygon points={item.polygon.map(([x,y])=>`${x/1000*image.naturalWidth},${y/1000*image.naturalHeight}`).join(" ")} fill="rgba(104,230,255,.08)" stroke={item.id===selectedId?"#68e6ff":"#a78bfa"} strokeWidth="2" vectorEffect="non-scaling-stroke"/>}</g>)}
         </svg>
       </div>
       <div className="section-label"><span>Verified character & suggestions</span><span className="muted">{detections.length} remaining</span></div>
