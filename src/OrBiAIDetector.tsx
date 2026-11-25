@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bot, Check, ScanSearch, AlertCircle, RefreshCw, ShieldCheck } from "lucide-react";
+import { Bot, Check, ScanSearch, AlertCircle, RefreshCw, ShieldCheck, Layers3 } from "lucide-react";
 import type { RigPartAsset, RigPartName } from "./OrBiRig2D";
 
 type PartChoice = RigPartName | "crown";
@@ -221,6 +221,52 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
     }
   };
 
+  const createAllDetected = () => {
+    if (!analysis || !image) return;
+    const created: string[] = [];
+    const skipped: string[] = [];
+    const used = new Set<string>();
+    for (const detection of analysis.detections) {
+      const part = mapPart(detection.name);
+      if (!part || used.has(part)) { skipped.push(detection.label); continue; }
+      const [y1,x1,y2,x2] = detection.box;
+      const left = Math.max(0, Math.floor((x1/1000)*image.naturalWidth));
+      const top = Math.max(0, Math.floor((y1/1000)*image.naturalHeight));
+      const right = Math.min(image.naturalWidth, Math.ceil((x2/1000)*image.naturalWidth));
+      const bottom = Math.min(image.naturalHeight, Math.ceil((y2/1000)*image.naturalHeight));
+      const width = Math.max(1,right-left), height = Math.max(1,bottom-top);
+      try {
+        const crop = makeTransparentCrop(image,left,top,width,height);
+        if (crop.data.length > 3_500_000) { skipped.push(detection.label + " (layer too large)"); continue; }
+        const [pivotX,pivotY] = PIVOTS[part];
+        const pivotImageX = left + width * pivotX / 100;
+        const pivotImageY = top + height * pivotY / 100;
+        const asset: RigPartAsset = {
+          id: crypto.randomUUID(),
+          name: PARTS.find(item => item.id===part)?.label ?? part,
+          image: crop.data,
+          x: 12+(pivotImageX/image.naturalWidth)*76,
+          y: 9+(pivotImageY/image.naturalHeight)*82,
+          width: Math.max(4,(width/image.naturalWidth)*76),
+          pivotX,pivotY,rotation:0,visible:true,
+        };
+        onCreate(part,asset);
+        used.add(part);
+        created.push(asset.name);
+      } catch {
+        skipped.push(detection.label + " (could not isolate)");
+      }
+    }
+    if (!created.length) {
+      setError("No detected parts could be converted into transparent layers. Review the suggestions or use the Part Cutter.");
+      return;
+    }
+    setStatus(`Auto-rig created ${created.length} layers: ${created.join(", ")}.${skipped.length ? " Skipped: " + skipped.join(", ") + "." : ""} Inspect pivots and overlaps in Rigging before playback.`);
+    setAnalysis(current => current ? {...current,detections:[]} : current);
+    setSelectedId("");
+    setError("");
+  };
+
   const addSelected = () => {
     if (!selected || !image) return;
     const [y1,x1,y2,x2] = selected.box;
@@ -285,6 +331,9 @@ export default function OrBiAIDetector({ imageUrl, onCreate }: {
         </svg>
       </div>
       <div className="section-label"><span>Verified character & suggestions</span><span className="muted">{detections.length} remaining</span></div>
+      {detections.length > 0 && <button className="button primary reference-action" onClick={createAllDetected}>
+        <Layers3 size={15}/> Auto-create all detected layers ({detections.length})
+      </button>}
       <div className="reference-filename">Identity confidence: {analysis.identityConfidence===null?"not supplied":Math.round(analysis.identityConfidence*100)+"%"} · {analysis.analysisVersion}</div>
       <div className="sprite-candidate-grid">
         {detections.map(item => <button key={item.id} className={"sprite-candidate "+(selectedId===item.id?"active":"")}
